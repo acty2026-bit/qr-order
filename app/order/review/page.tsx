@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 type CartRow = {
   menu: { id: string; name: string; price: number };
@@ -10,17 +10,41 @@ type CartRow = {
 
 export default function OrderReviewPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const store = searchParams.get('store') ?? '';
-  const tableNo = Number(searchParams.get('table') ?? '0');
+  const [store, setStore] = useState('');
+  const [tableNo, setTableNo] = useState(0);
 
   const [taxRate, setTaxRate] = useState(10);
   const [rows, setRows] = useState<CartRow[]>([]);
   const [sending, setSending] = useState(false);
 
-  const cartKey = `qr-cart:${store}:${tableNo}`;
+  const cartKey = `qr-cart:${store}:${tableNo || 0}`;
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const storeKey = params.get('store') ?? '';
+    const table = Number(params.get('table') ?? '0');
+    setStore(storeKey);
+    setTableNo(table);
+
+    const key = `qr-cart:${storeKey}:${table}`;
+    const raw = sessionStorage.getItem(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as Record<string, CartRow>;
+        setRows(Object.values(parsed));
+      } catch {
+        setRows([]);
+      }
+    }
+
+    if (!storeKey) return;
+    fetch(`/api/order/context?store=${encodeURIComponent(storeKey)}`)
+      .then((r) => r.json())
+      .then((data) => setTaxRate(data.store?.taxRate ?? 10));
+  }, []);
+
+  useEffect(() => {
+    if (!store) return;
     const raw = sessionStorage.getItem(cartKey);
     if (raw) {
       try {
@@ -31,10 +55,6 @@ export default function OrderReviewPage() {
       }
     }
 
-    if (!store) return;
-    fetch(`/api/order/context?store=${encodeURIComponent(store)}`)
-      .then((r) => r.json())
-      .then((data) => setTaxRate(data.store?.taxRate ?? 10));
   }, [cartKey, store]);
 
   const subtotal = useMemo(
