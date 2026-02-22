@@ -1,0 +1,1 @@
+ALTER TABLE "menus" ADD COLUMN "name_kana" TEXT NOT NULL DEFAULT '';

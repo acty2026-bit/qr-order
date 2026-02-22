@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MenuCategory {
+  quick
+  food
+  recommendation
+  drink
+  dessert
+  other
+}
+
+enum FoodSubCategory {
+  seafood
+  grill
+  fried
+  small_dish
+  rice
+}
+
+enum DrinkSubCategory {
+  beer
+  highball
+  sour
+  cocktail
+  shochu
+  sake
+  wine
+  fruit_liquor
+  non_alcohol
+  soft_drink
+}
+
+enum PrintStatus {
+  success
+  failed
+  pending
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  storeKey  String   @unique @map("store_key")
+  name      String
+  taxRate   Int      @default(10) @map("tax_rate")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  menus  Menu[]
+  orders Order[]
+  calls  Call[]
+
+  @@map("stores")
+}
+
+model Menu {
+  id         String       @id @default(cuid())
+  storeId    String       @map("store_id")
+  name       String
+  nameKana   String       @default("") @map("name_kana")
+  category   MenuCategory
+  foodSubCategory FoodSubCategory? @map("food_sub_category")
+  drinkSubCategory DrinkSubCategory? @map("drink_sub_category")
+  price      Int
+  isSoldOut  Boolean      @default(false) @map("is_sold_out")
+  deletedAt  DateTime?    @map("deleted_at")
+  sortOrder  Int          @default(0) @map("sort_order")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  store      Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([storeId, category])
+  @@index([storeId, deletedAt])
+  @@index([storeId, sortOrder])
+  @@map("menus")
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  storeId           String      @map("store_id")
+  tableNo           Int         @map("table_no")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  printStatus       PrintStatus @default(pending) @map("print_status")
+  printErrorMessage String?     @map("print_error_message")
+
+  store      Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([storeId, createdAt])
+  @@index([storeId, tableNo])
+  @@map("orders")
+}
+
+model OrderItem {
+  id            String @id @default(cuid())
+  orderId       String @map("order_id")
+  menuId        String @map("menu_id")
+  nameSnapshot  String @map("name_snapshot")
+  priceSnapshot Int    @map("price_snapshot")
+  qty           Int
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menu  Menu  @relation(fields: [menuId], references: [id])
+
+  @@index([orderId])
+  @@index([menuId])
+  @@map("order_items")
+}
+
+model Call {
+  id             String    @id @default(cuid())
+  storeId        String    @map("store_id")
+  tableNo        Int       @map("table_no")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  acknowledgedAt DateTime? @map("acknowledged_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, createdAt])
+  @@index([storeId, acknowledgedAt])
+  @@map("calls")
+}
