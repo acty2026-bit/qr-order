@@ -10,11 +10,11 @@ async function main() {
   });
 
   const menus = [
-    { name: '唐揚げ', category: 'food', price: 580, sortOrder: 1 },
-    { name: '枝豆', category: 'food', price: 420, sortOrder: 2 },
-    { name: '生ビール', category: 'drink', price: 650, sortOrder: 3 },
-    { name: 'ウーロン茶', category: 'drink', price: 320, sortOrder: 4 },
-    { name: '本日のおすすめ', category: 'other', price: 700, sortOrder: 5 }
+    { name: '唐揚げ', category: 'food', price: 580, sortOrder: 1, isAllYouCan: false },
+    { name: '枝豆', category: 'food', price: 420, sortOrder: 2, isAllYouCan: true },
+    { name: '生ビール', category: 'drink', price: 650, sortOrder: 3, isAllYouCan: true },
+    { name: 'ウーロン茶', category: 'drink', price: 320, sortOrder: 4, isAllYouCan: true },
+    { name: '本日のおすすめ', category: 'other', price: 700, sortOrder: 5, isAllYouCan: false }
   ] as const;
 
   for (const menu of menus) {
@@ -23,7 +23,8 @@ async function main() {
       update: {
         category: menu.category,
         price: menu.price,
-        sortOrder: menu.sortOrder
+        sortOrder: menu.sortOrder,
+        isAllYouCan: menu.isAllYouCan
       },
       create: {
         id: `${store.id}-${menu.name}`,
@@ -31,7 +32,8 @@ async function main() {
         name: menu.name,
         category: menu.category,
         price: menu.price,
-        sortOrder: menu.sortOrder
+        sortOrder: menu.sortOrder,
+        isAllYouCan: menu.isAllYouCan
       }
     });
   }

@@ -21,6 +21,7 @@ type Menu = {
     | 'soft_drink'
     | null;
   price: number;
+  isAllYouCan: boolean;
   isSoldOut: boolean;
   sortOrder: number;
 };
@@ -53,7 +54,8 @@ export default function AdminMenuPage() {
     name: '',
     name_kana: '',
     category_choice: 'food:small_dish' as CategoryChoice,
-    price: ''
+    price: '',
+    is_all_you_can: false
   });
   const [menuFilter, setMenuFilter] = useState<'all' | 'food' | 'recommendation' | 'drink' | 'dessert' | 'other'>(
     'all'
@@ -167,6 +169,7 @@ export default function AdminMenuPage() {
         food_sub_category: parsed.food_sub_category,
         drink_sub_category: parsed.drink_sub_category,
         price: toInt(form.price),
+        is_all_you_can: form.is_all_you_can,
         sort_order: nextSortOrder
       })
     });
@@ -174,7 +177,7 @@ export default function AdminMenuPage() {
     if (res.ok) {
       const json = await res.json();
       setMenus((prev) => [...prev, json.menu]);
-      setForm({ name: '', name_kana: '', category_choice: 'food:small_dish', price: '' });
+      setForm({ name: '', name_kana: '', category_choice: 'food:small_dish', price: '', is_all_you_can: false });
       showToast('登録しました');
     }
   };
@@ -192,6 +195,7 @@ export default function AdminMenuPage() {
         food_sub_category: parsed.food_sub_category,
         drink_sub_category: parsed.drink_sub_category,
         price: Number(menu.price),
+        is_all_you_can: menu.isAllYouCan,
         is_sold_out: menu.isSoldOut,
         sort_order: Number(menu.sortOrder)
       })
@@ -224,6 +228,7 @@ export default function AdminMenuPage() {
           food_sub_category: parsed.food_sub_category,
           drink_sub_category: parsed.drink_sub_category,
           price: Number(menu.price),
+          is_all_you_can: menu.isAllYouCan,
           is_sold_out: menu.isSoldOut,
           sort_order: Number(menu.sortOrder)
         })
@@ -311,7 +316,7 @@ export default function AdminMenuPage() {
   };
 
   const controlStyle = { height: 42 };
-  const baseColumns = '2fr 1.4fr 1fr 1.8fr';
+  const baseColumns = '2fr 1.4fr 1fr 1.6fr';
   const priceWrapStyle = { position: 'relative' as const, height: 42 };
   const priceInputStyle = { ...controlStyle, paddingRight: 28 };
   const yenStyle = {
@@ -357,7 +362,7 @@ export default function AdminMenuPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: `${baseColumns} 0.9fr 1.2fr`,
+            gridTemplateColumns: `${baseColumns} 0.9fr 0.9fr 1.2fr`,
             columnGap: 10,
             rowGap: 8,
             width: '100%'
@@ -419,6 +424,13 @@ export default function AdminMenuPage() {
           <button className="btn-primary" style={controlStyle} onClick={createMenu}>
             登録
           </button>
+          <button
+            className={form.is_all_you_can ? 'btn-primary' : 'btn-ghost'}
+            style={form.is_all_you_can ? { ...controlStyle, background: '#1f5fd1', color: '#fff' } : controlStyle}
+            onClick={() => setForm((prev) => ({ ...prev, is_all_you_can: !prev.is_all_you_can }))}
+          >
+            放題
+          </button>
           <button className="btn-ghost" style={controlStyle} onClick={changeTaxRate}>
             税率変更 ({taxRate}%)
           </button>
@@ -476,7 +488,7 @@ export default function AdminMenuPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: `${baseColumns} 0.9fr 0.9fr 0.9fr`,
+                gridTemplateColumns: `${baseColumns} 0.9fr 0.9fr 0.9fr 0.9fr`,
                 columnGap: 10,
                 rowGap: 8,
                 width: '100%'
@@ -551,6 +563,15 @@ export default function AdminMenuPage() {
                   <option value="drink:soft_drink">ドリンク &gt; ソフトドリンク</option>
                 </optgroup>
               </select>
+              <button
+                className={menu.isAllYouCan ? 'btn-primary' : 'btn-ghost'}
+                style={menu.isAllYouCan ? { ...controlStyle, background: '#1f5fd1', color: '#fff' } : controlStyle}
+                onClick={() =>
+                  setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, isAllYouCan: !m.isAllYouCan } : m)))
+                }
+              >
+                放題
+              </button>
               <button
                 className={menu.isSoldOut ? 'btn-primary' : 'btn-ghost'}
                 style={menu.isSoldOut ? { ...controlStyle, background: '#1f5fd1', color: '#fff' } : controlStyle}

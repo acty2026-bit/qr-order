@@ -26,6 +26,7 @@ const createSchema = z.object({
     .optional()
     .nullable(),
   price: z.number().int().min(0),
+  is_all_you_can: z.boolean().optional().default(false),
   is_sold_out: z.boolean().optional().default(false),
   sort_order: z.number().int().optional().default(0)
 });
@@ -52,6 +53,7 @@ const updateSchema = z.object({
     .optional()
     .nullable(),
   price: z.number().int().min(0),
+  is_all_you_can: z.boolean(),
   is_sold_out: z.boolean(),
   sort_order: z.number().int()
 });
@@ -88,6 +90,7 @@ export async function POST(req: NextRequest) {
       foodSubCategory: parsed.data.category === 'food' ? parsed.data.food_sub_category ?? 'small_dish' : null,
       drinkSubCategory: parsed.data.category === 'drink' ? parsed.data.drink_sub_category ?? 'soft_drink' : null,
       price: parsed.data.price,
+      isAllYouCan: parsed.data.is_all_you_can,
       isSoldOut: parsed.data.is_sold_out,
       sortOrder: parsed.data.sort_order
     }
@@ -109,6 +112,7 @@ export async function PUT(req: NextRequest) {
       foodSubCategory: parsed.data.category === 'food' ? parsed.data.food_sub_category ?? 'small_dish' : null,
       drinkSubCategory: parsed.data.category === 'drink' ? parsed.data.drink_sub_category ?? 'soft_drink' : null,
       price: parsed.data.price,
+      isAllYouCan: parsed.data.is_all_you_can,
       isSoldOut: parsed.data.is_sold_out,
       sortOrder: parsed.data.sort_order
     }

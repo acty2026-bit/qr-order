@@ -66,6 +66,7 @@ model Menu {
   foodSubCategory FoodSubCategory? @map("food_sub_category")
   drinkSubCategory DrinkSubCategory? @map("drink_sub_category")
   price      Int
+  isAllYouCan Boolean     @default(false) @map("is_all_you_can")
   isSoldOut  Boolean      @default(false) @map("is_sold_out")
   deletedAt  DateTime?    @map("deleted_at")
   sortOrder  Int          @default(0) @map("sort_order")

@@ -21,6 +21,7 @@ type Menu = {
     | 'soft_drink'
     | null;
   price: number;
+  isAllYouCan: boolean;
   isSoldOut: boolean;
 };
 
@@ -63,6 +64,7 @@ export default function OrderPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [repeatMenuIds, setRepeatMenuIds] = useState<string[]>([]);
+  const [planTab, setPlanTab] = useState<'all' | 'houdai'>('all');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -131,7 +133,7 @@ export default function OrderPage() {
       activeCategory === 'food'
         ? menus.filter((menu) => menu.category === 'food' || menu.category === 'quick')
         : menus.filter((menu) => menu.category === activeCategory);
-    const matchedRows = rows.filter(isMatch);
+    const matchedRows = rows.filter((menu) => isMatch(menu) && (planTab === 'all' || menu.isAllYouCan));
     if (activeCategory === 'food') {
       return matchedRows.filter((menu) => (menu.foodSubCategory ?? 'small_dish') === activeFoodSubCategory);
     }
@@ -139,17 +141,18 @@ export default function OrderPage() {
       return matchedRows.filter((menu) => (menu.drinkSubCategory ?? 'soft_drink') === activeDrinkSubCategory);
     }
     return matchedRows;
-  }, [menus, activeCategory, activeFoodSubCategory, activeDrinkSubCategory, normalizedSearch]);
+  }, [menus, activeCategory, activeFoodSubCategory, activeDrinkSubCategory, normalizedSearch, planTab]);
 
   const recommendationMenus = useMemo(
-    () => menus.filter((menu) => menu.category === 'recommendation' && isMatch(menu)),
-    [menus, normalizedSearch]
+    () => menus.filter((menu) => menu.category === 'recommendation' && isMatch(menu) && (planTab === 'all' || menu.isAllYouCan)),
+    [menus, normalizedSearch, planTab]
   );
 
   const repeatMenus = useMemo(
-    () => menus.filter((menu) => repeatMenuIds.includes(menu.id) && isMatch(menu)),
-    [menus, repeatMenuIds, normalizedSearch]
+    () => menus.filter((menu) => repeatMenuIds.includes(menu.id) && isMatch(menu) && (planTab === 'all' || menu.isAllYouCan)),
+    [menus, repeatMenuIds, normalizedSearch, planTab]
   );
+  const hasAllYouCanMenus = useMemo(() => menus.some((menu) => menu.isAllYouCan), [menus]);
 
   const subtotal = Object.values(cart).reduce((sum, item) => sum + item.menu.price * item.qty, 0);
   const totalQty = Object.values(cart).reduce((sum, item) => sum + item.qty, 0);
@@ -312,6 +315,24 @@ export default function OrderPage() {
           </button>
         ))}
       </div>
+
+      {hasAllYouCanMenus && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 8,
+            marginBottom: 10
+          }}
+        >
+          <button className={planTab === 'all' ? 'btn-primary' : 'btn-ghost'} onClick={() => setPlanTab('all')}>
+            全て
+          </button>
+          <button className={planTab === 'houdai' ? 'btn-primary' : 'btn-ghost'} onClick={() => setPlanTab('houdai')}>
+            放題
+          </button>
+        </div>
+      )}
 
       {activeCategory === 'food' && (
         <div
