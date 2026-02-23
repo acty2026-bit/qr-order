@@ -27,20 +27,85 @@ type Menu = {
 
 type Cart = Record<string, { menu: Menu; qty: number }>;
 
-const labels: Record<Menu['category'], string> = {
-  food: 'フード',
+type RailKey =
+  | 'recommendation'
+  | 'repeat'
+  | 'call'
+  | 'food'
+  | 'drink'
+  | 'dessert'
+  | 'other'
+  | 'seafood'
+  | 'grill'
+  | 'fried'
+  | 'small_dish'
+  | 'rice'
+  | 'beer'
+  | 'highball'
+  | 'sour'
+  | 'cocktail'
+  | 'shochu'
+  | 'sake'
+  | 'wine'
+  | 'fruit_liquor'
+  | 'non_alcohol'
+  | 'soft_drink';
+
+const labelMap: Record<RailKey, string> = {
   recommendation: 'おすすめ',
+  repeat: 'おかわり',
+  call: '店員呼出',
+  food: 'フード',
   drink: 'ドリンク',
-  dessert: 'デザート',
+  dessert: '前菜',
   other: 'その他',
-  quick: 'フード'
+  seafood: '海鮮',
+  grill: '焼き物',
+  fried: '揚げ物',
+  small_dish: '一品料理',
+  rice: 'ご飯物',
+  beer: 'ビール',
+  highball: 'ハイボール',
+  sour: 'サワー',
+  cocktail: 'カクテル',
+  shochu: '焼酎',
+  sake: '日本酒',
+  wine: 'ワイン',
+  fruit_liquor: '果実酒',
+  non_alcohol: 'ノンアル',
+  soft_drink: 'ソフトD'
+};
+
+const railColor: Record<RailKey, string> = {
+  recommendation: '#f8a94f',
+  repeat: '#8ecf57',
+  call: '#8ecf57',
+  food: '#63c255',
+  drink: '#59b6ff',
+  dessert: '#f8a2c7',
+  other: '#b6b6b6',
+  seafood: '#5bc0de',
+  grill: '#f3a84b',
+  fried: '#f2cb4d',
+  small_dish: '#8dcf50',
+  rice: '#8b9ee8',
+  beer: '#ffc34d',
+  highball: '#ff9b54',
+  sour: '#7bd98f',
+  cocktail: '#ea8cff',
+  shochu: '#cda879',
+  sake: '#9ea7ff',
+  wine: '#d45c7d',
+  fruit_liquor: '#ff8ea7',
+  non_alcohol: '#67d2d1',
+  soft_drink: '#7cc5ff'
 };
 
 const icons: Record<Menu['category'], string> = {
   food: '🍽️',
   recommendation: '⭐',
-  drink: '🥤',
-  dessert: '🍰',
+  drink: '🍺',
+  dessert: '🥗',
   other: '🍴',
   quick: '🍽️'
 };
@@ -51,13 +116,6 @@ export default function OrderPage() {
   const [tableNo, setTableNo] = useState(0);
   const [taxRate, setTaxRate] = useState(10);
   const [menus, setMenus] = useState<Menu[]>([]);
-  const [activeCategory, setActiveCategory] = useState<Menu['category']>('food');
-  const [activeFoodSubCategory, setActiveFoodSubCategory] = useState<
-    'seafood' | 'grill' | 'fried' | 'small_dish' | 'rice'
-  >('small_dish');
-  const [activeDrinkSubCategory, setActiveDrinkSubCategory] = useState<
-    'beer' | 'highball' | 'sour' | 'cocktail' | 'shochu' | 'sake' | 'wine' | 'fruit_liquor' | 'non_alcohol' | 'soft_drink'
-  >('soft_drink');
   const [cart, setCart] = useState<Cart>({});
   const [message, setMessage] = useState('');
   const [cartKey, setCartKey] = useState('');
@@ -65,6 +123,7 @@ export default function OrderPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [repeatMenuIds, setRepeatMenuIds] = useState<string[]>([]);
   const [planTab, setPlanTab] = useState<'all' | 'houdai'>('all');
+  const [activeRail, setActiveRail] = useState<RailKey>('recommendation');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -128,31 +187,43 @@ export default function OrderPage() {
     return menu.name.toLowerCase().includes(normalizedSearch);
   };
 
-  const categoryMenus = useMemo(() => {
-    const rows =
-      activeCategory === 'food'
-        ? menus.filter((menu) => menu.category === 'food' || menu.category === 'quick')
-        : menus.filter((menu) => menu.category === activeCategory);
-    const matchedRows = rows.filter((menu) => isMatch(menu) && (planTab === 'all' || menu.isAllYouCan));
-    if (activeCategory === 'food') {
-      return matchedRows.filter((menu) => (menu.foodSubCategory ?? 'small_dish') === activeFoodSubCategory);
-    }
-    if (activeCategory === 'drink') {
-      return matchedRows.filter((menu) => (menu.drinkSubCategory ?? 'soft_drink') === activeDrinkSubCategory);
-    }
-    return matchedRows;
-  }, [menus, activeCategory, activeFoodSubCategory, activeDrinkSubCategory, normalizedSearch, planTab]);
+  const filteredByPlanAndSearch = useMemo(
+    () => menus.filter((menu) => isMatch(menu) && (planTab === 'all' || menu.isAllYouCan)),
+    [menus, planTab, normalizedSearch]
+  );
 
   const recommendationMenus = useMemo(
-    () => menus.filter((menu) => menu.category === 'recommendation' && isMatch(menu) && (planTab === 'all' || menu.isAllYouCan)),
-    [menus, normalizedSearch, planTab]
+    () => filteredByPlanAndSearch.filter((menu) => menu.category === 'recommendation'),
+    [filteredByPlanAndSearch]
   );
 
   const repeatMenus = useMemo(
-    () => menus.filter((menu) => repeatMenuIds.includes(menu.id) && isMatch(menu) && (planTab === 'all' || menu.isAllYouCan)),
-    [menus, repeatMenuIds, normalizedSearch, planTab]
+    () => filteredByPlanAndSearch.filter((menu) => repeatMenuIds.includes(menu.id)),
+    [filteredByPlanAndSearch, repeatMenuIds]
   );
-  const hasAllYouCanMenus = useMemo(() => menus.some((menu) => menu.isAllYouCan), [menus]);
+
+  const listMenus = useMemo(() => {
+    if (activeRail === 'recommendation') return recommendationMenus;
+    if (activeRail === 'repeat') return repeatMenus;
+    if (activeRail === 'food') return filteredByPlanAndSearch.filter((m) => m.category === 'food' || m.category === 'quick');
+    if (activeRail === 'drink') return filteredByPlanAndSearch.filter((m) => m.category === 'drink');
+    if (activeRail === 'dessert') return filteredByPlanAndSearch.filter((m) => m.category === 'dessert');
+    if (activeRail === 'other') return filteredByPlanAndSearch.filter((m) => m.category === 'other');
+
+    if (['seafood', 'grill', 'fried', 'small_dish', 'rice'].includes(activeRail)) {
+      return filteredByPlanAndSearch.filter(
+        (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === activeRail
+      );
+    }
+
+    if (
+      ['beer', 'highball', 'sour', 'cocktail', 'shochu', 'sake', 'wine', 'fruit_liquor', 'non_alcohol', 'soft_drink'].includes(activeRail)
+    ) {
+      return filteredByPlanAndSearch.filter((m) => m.category === 'drink' && (m.drinkSubCategory ?? 'soft_drink') === activeRail);
+    }
+
+    return filteredByPlanAndSearch;
+  }, [activeRail, filteredByPlanAndSearch, recommendationMenus, repeatMenus]);
 
   const subtotal = Object.values(cart).reduce((sum, item) => sum + item.menu.price * item.qty, 0);
   const totalQty = Object.values(cart).reduce((sum, item) => sum + item.qty, 0);
@@ -194,137 +265,122 @@ export default function OrderPage() {
     router.push(`/order/review?store=${encodeURIComponent(store)}&table=${tableNo}`);
   };
 
-  const renderMenuCard = (menu: Menu, keyPrefix = '') => (
+  const shareQr = () => {
+    const shareUrl = `${window.location.origin}/order?store=${encodeURIComponent(store)}&table=${tableNo}`;
+    window.prompt('同じテーブル共有用URL', shareUrl);
+  };
+
+  const railItems: RailKey[] = [
+    'recommendation',
+    'repeat',
+    'call',
+    'drink',
+    'dessert',
+    'grill',
+    'fried',
+    'small_dish',
+    'rice'
+  ];
+
+  const hasAllYouCanMenus = menus.some((menu) => menu.isAllYouCan);
+
+  const renderMenuCard = (menu: Menu) => (
     <div
-      key={`${keyPrefix}${menu.id}`}
+      key={menu.id}
       className="card"
       style={{
-        borderRadius: 24,
-        padding: 12,
-        opacity: menu.isSoldOut ? 0.5 : 1,
-        background: '#fff',
-        border: '1px solid #efe9df'
+        display: 'grid',
+        gridTemplateColumns: '1fr 96px',
+        gap: 8,
+        padding: 10,
+        borderRadius: 12,
+        border: '1px solid #e7e1d8',
+        opacity: menu.isSoldOut ? 0.55 : 1,
+        background: '#fff'
       }}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '84px 1fr', gap: 12, alignItems: 'center' }}>
-        <div
-          style={{
-            width: 84,
-            height: 84,
-            borderRadius: 16,
-            display: 'grid',
-            placeItems: 'center',
-            background: 'linear-gradient(145deg, #f3efe7, #fff)'
-          }}
-        >
-          <span style={{ fontSize: 44 }}>{icons[menu.category]}</span>
-        </div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 19, lineHeight: 1.25 }}>{menu.name}</div>
-          {menu.isSoldOut ? (
-            <button className="btn-ghost" disabled style={{ marginTop: 8 }}>
-              売り切れ
+      <div>
+        <div style={{ fontWeight: 800, fontSize: 18, lineHeight: 1.25 }}>{menu.name}</div>
+        <div style={{ marginTop: 4, color: '#666', fontWeight: 700 }}>￥{formatPrice(menu.price)}</div>
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            style={{
+              display: 'inline-grid',
+              gridTemplateColumns: '30px 30px 30px',
+              borderRadius: 10,
+              background: '#f2eee6',
+              textAlign: 'center',
+              alignItems: 'center'
+            }}
+          >
+            <button
+              className="btn-ghost"
+              style={{ border: 0, background: 'transparent' }}
+              onClick={() => changeQty(menu.id, getQty(menu.id) - 1, menu)}
+              disabled={menu.isSoldOut}
+            >
+              -
             </button>
-          ) : (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, gap: 10 }}>
-              <div
-                style={{
-                  display: 'inline-grid',
-                  gridTemplateColumns: '36px 36px 36px',
-                  alignItems: 'center',
-                  textAlign: 'center',
-                  background: 'var(--bg)',
-                  borderRadius: 14
-                }}
-              >
-                <button
-                  className="btn-ghost"
-                  style={{ border: 0, background: 'transparent', borderRadius: 14 }}
-                  onClick={() => changeQty(menu.id, getQty(menu.id) - 1, menu)}
-                >
-                  -
-                </button>
-                <div style={{ fontWeight: 700 }}>{getQty(menu.id)}</div>
-                <button
-                  className="btn-ghost"
-                  style={{ border: 0, background: 'transparent', borderRadius: 14 }}
-                  onClick={() => changeQty(menu.id, getQty(menu.id) + 1, menu)}
-                >
-                  +
-                </button>
-              </div>
-              <div style={{ minWidth: 116, textAlign: 'right' }}>
-                <div style={{ fontSize: 19, fontWeight: 800, whiteSpace: 'nowrap', paddingRight: 10 }}>
-                  ￥{formatPrice(menu.price)}
-                </div>
-                <div style={{ fontSize: 12, color: '#8d877b', whiteSpace: 'nowrap' }}>
-                  （税込￥{formatPrice(taxIncluded(menu.price))}）
-                </div>
-              </div>
-            </div>
+            <div style={{ fontWeight: 800 }}>{getQty(menu.id)}</div>
+            <button
+              className="btn-ghost"
+              style={{ border: 0, background: 'transparent' }}
+              onClick={() => changeQty(menu.id, getQty(menu.id) + 1, menu)}
+              disabled={menu.isSoldOut}
+            >
+              +
+            </button>
+          </div>
+          {menu.isAllYouCan && (
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#996700', background: '#fff0c7', borderRadius: 6, padding: '1px 6px' }}>
+              放題
+            </span>
+          )}
+          {menu.isSoldOut && (
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#8a3a3a', background: '#ffe7e7', borderRadius: 6, padding: '1px 6px' }}>
+              売切
+            </span>
           )}
         </div>
+      </div>
+      <div
+        style={{
+          width: 96,
+          height: 96,
+          borderRadius: 10,
+          background: 'linear-gradient(145deg, #f4f0e9, #ffffff)',
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: 48
+        }}
+      >
+        {icons[menu.category]}
       </div>
     </div>
   );
 
   return (
-    <main style={{ maxWidth: 520, margin: '0 auto', padding: '16px 14px 220px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 12, color: '#8d877b' }}>Table delivery</div>
-          <div style={{ fontWeight: 700 }}>
-            {store || '-'} / T{tableNo || '-'}
-          </div>
-        </div>
-        <button className="btn-ghost" style={{ borderRadius: 12 }} onClick={() => setIsSearchOpen((prev) => !prev)}>
+    <main style={{ maxWidth: 430, margin: '0 auto', padding: '8px 10px 88px', background: '#f6f5f3', minHeight: '100dvh' }}>
+      <div style={{ position: 'relative', textAlign: 'center', padding: '8px 0 10px' }}>
+        <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 2 }}>メニュー</div>
+        <div style={{ fontSize: 12, color: '#7a7469' }}>{store || '-'} / T{tableNo || '-'}</div>
+        <button
+          className="btn-ghost"
+          style={{ position: 'absolute', right: 2, top: 8, width: 42, height: 42, borderRadius: 10 }}
+          onClick={() => setIsSearchOpen((prev) => !prev)}
+        >
           🔍
         </button>
       </div>
 
       {isSearchOpen && (
-        <div style={{ marginBottom: 10 }}>
-          <input
-            placeholder="商品名で検索"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div style={{ marginBottom: 8 }}>
+          <input placeholder="商品名で検索" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
       )}
 
-      <h1 style={{ margin: '0 0 10px', fontSize: 44, lineHeight: 1.02, letterSpacing: -1 }}>
-        Hungry? <span style={{ color: '#8d877b', fontWeight: 400 }}>Order & Eat.</span>
-      </h1>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6, marginBottom: 10 }}>
-        {(['food', 'recommendation', 'drink', 'dessert', 'other'] as const).map((category) => (
-          <button
-            key={category}
-            onClick={() => setActiveCategory(category)}
-            style={{
-              width: '100%',
-              minHeight: 92,
-              borderRadius: 16,
-              border: activeCategory === category ? '2px solid #161616' : '1px solid #e0dbcf',
-              background: '#fff',
-              padding: '11px 4px'
-            }}
-          >
-            <div style={{ fontSize: 28, lineHeight: 1.1, marginBottom: 3 }}>{icons[category]}</div>
-            <div style={{ fontSize: 16, whiteSpace: 'nowrap', fontWeight: 700 }}>{labels[category]}</div>
-          </button>
-        ))}
-      </div>
-
       {hasAllYouCanMenus && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gap: 8,
-            marginBottom: 10
-          }}
-        >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
           <button className={planTab === 'all' ? 'btn-primary' : 'btn-ghost'} onClick={() => setPlanTab('all')}>
             全て
           </button>
@@ -334,156 +390,117 @@ export default function OrderPage() {
         </div>
       )}
 
-      {activeCategory === 'food' && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-            gap: 6,
-            marginBottom: 10
-          }}
-        >
-          {(
-            [
-              ['seafood', '海鮮'],
-              ['grill', '焼き物'],
-              ['fried', '揚げ物'],
-              ['small_dish', '一品料理'],
-              ['rice', 'ご飯物']
-            ] as const
-          ).map(([value, label]) => (
+      <div style={{ display: 'grid', gridTemplateColumns: '98px 1fr', gap: 8 }}>
+        <aside style={{ display: 'grid', gap: 6, alignContent: 'start' }}>
+          {railItems.map((key) => (
             <button
-              key={value}
-              className={activeFoodSubCategory === value ? 'btn-primary' : 'btn-ghost'}
-              onClick={() => setActiveFoodSubCategory(value)}
+              key={key}
+              className={activeRail === key ? 'btn-primary' : 'btn-ghost'}
+              onClick={() => setActiveRail(key)}
               style={{
-                width: '100%',
-                minHeight: 56,
-                fontSize: 12,
-                lineHeight: 1.2,
-                whiteSpace: 'normal',
-                padding: '6px 4px'
+                justifyContent: 'flex-start',
+                fontSize: 13,
+                borderRadius: 10,
+                height: 50,
+                borderLeft: `4px solid ${railColor[key]}`
               }}
             >
-              {label}
+              {labelMap[key]}
             </button>
           ))}
-        </div>
-      )}
-
-      {activeCategory === 'drink' && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-            gap: 6,
-            marginBottom: 10
-          }}
-        >
-          {(
-            [
-              ['beer', 'ビール'],
-              ['highball', 'ハイボール'],
-              ['sour', 'サワー・酎ハイ'],
-              ['cocktail', 'カクテル'],
-              ['shochu', '焼酎'],
-              ['sake', '日本酒'],
-              ['wine', 'ワイン'],
-              ['fruit_liquor', '梅酒・果実酒'],
-              ['non_alcohol', 'ノンアルコール'],
-              ['soft_drink', 'ソフト\nドリンク']
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              className={activeDrinkSubCategory === value ? 'btn-primary' : 'btn-ghost'}
-              onClick={() => setActiveDrinkSubCategory(value)}
-              style={{
-                width: '100%',
-                minHeight: 56,
-                fontSize: 12,
-                lineHeight: 1.2,
-                whiteSpace: 'pre-line',
-                padding: '6px 4px'
-              }}
-            >
-              {label}
+          {activeRail === 'call' && (
+            <button className="btn-danger" style={{ height: 44 }} onClick={callStaff}>
+              呼び出す
             </button>
-          ))}
-        </div>
-      )}
+          )}
+        </aside>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-        {recommendationMenus.length > 0 && (
-          <div className="card" style={{ borderRadius: 16, background: '#fff9ec' }}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>おすすめ</div>
-            <div style={{ display: 'grid', gap: 8 }}>{recommendationMenus.slice(0, 3).map((menu) => renderMenuCard(menu, 'rec-'))}</div>
-          </div>
-        )}
-
-        {repeatMenus.length > 0 && (
-          <div className="card" style={{ borderRadius: 16, background: '#eef8f2' }}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>おかわり</div>
-            <div style={{ display: 'grid', gap: 8 }}>{repeatMenus.slice(0, 3).map((menu) => renderMenuCard(menu, 'repeat-'))}</div>
-          </div>
-        )}
-
-        {activeCategory === 'other' && (
-          <div className="card" style={{ borderRadius: 24, padding: 14, border: '1px solid #efe9df' }}>
-            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>店員呼び出し</div>
-            <div style={{ color: '#6f6b61', marginBottom: 10 }}>ご要望がある場合はこちらを押してください</div>
-            <button className="btn-danger" onClick={callStaff}>
-              店員を呼ぶ
-            </button>
-          </div>
-        )}
-        {categoryMenus.map((menu) => renderMenuCard(menu))}
+        <section style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
+          {listMenus.length === 0 && (
+            <div className="card" style={{ padding: 16, color: '#767068' }}>
+              表示できる商品がありません
+            </div>
+          )}
+          {listMenus.map((menu) => renderMenuCard(menu))}
+        </section>
       </div>
 
-      <div
-        className="card"
+      <button
+        className={totalQty > 0 ? 'btn-primary soft-blink' : 'btn-primary'}
+        onClick={goToReview}
         style={{
           position: 'fixed',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          bottom: 0,
-          width: '94%',
-          maxWidth: 488,
-          borderBottomLeftRadius: 0,
-          borderBottomRightRadius: 0,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          padding: 12,
-          background: '#f2f2f5',
-          borderTop: '1px solid #ddd6c9'
+          right: 'max(12px, calc((100vw - 430px) / 2 + 12px))',
+          bottom: 78,
+          width: 72,
+          height: 72,
+          borderRadius: 36,
+          background: '#f59b2e',
+          color: '#fff',
+          border: '3px solid #fff',
+          boxShadow: '0 8px 18px rgba(0,0,0,0.2)',
+          display: 'grid',
+          placeItems: 'center',
+          fontWeight: 800
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#666' }}>
-          <span>数量</span>
-          <b>{totalQty}</b>
+        <div style={{ textAlign: 'center', lineHeight: 1.1 }}>
+          <div style={{ fontSize: 20 }}>🛒</div>
+          <div style={{ fontSize: 11 }}>カート</div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, color: '#666' }}>
-          <span>合計（税込）</span>
-          <span>￥{formatPrice(taxIncluded(subtotal))}</span>
-        </div>
-        <button
-          className={totalQty > 0 ? 'btn-primary soft-blink' : 'btn-primary'}
-          onClick={goToReview}
-          style={{
-            display: 'block',
-            width: '94%',
-            margin: '8px auto 0',
-            background: '#171717',
-            color: '#fff',
-            borderRadius: 14,
-            height: 48
-          }}
-        >
-          ご注文内容を確認
-        </button>
-      </div>
+        {totalQty > 0 && (
+          <span
+            style={{
+              position: 'absolute',
+              top: 3,
+              right: 3,
+              minWidth: 22,
+              height: 22,
+              borderRadius: 11,
+              background: '#ff7f17',
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 800,
+              display: 'grid',
+              placeItems: 'center',
+              padding: '0 6px'
+            }}
+          >
+            {totalQty}
+          </span>
+        )}
+      </button>
 
-      {message && <p style={{ marginTop: 10 }}>{message}</p>}
+      <nav
+        style={{
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: '#fff',
+          borderTop: '1px solid #ddd6c9',
+          height: 64,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          zIndex: 20
+        }}
+      >
+        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={() => setActiveRail('recommendation')}>
+          <div>🍴</div>
+          <div style={{ fontSize: 12 }}>メニュー</div>
+        </button>
+        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={goToReview}>
+          <div>🕘</div>
+          <div style={{ fontSize: 12 }}>履歴</div>
+        </button>
+        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={shareQr}>
+          <div>▦</div>
+          <div style={{ fontSize: 12 }}>QR</div>
+        </button>
+      </nav>
+
+      <div style={{ display: 'none' }}>￥{formatPrice(taxIncluded(subtotal))}</div>
+      {message && <p style={{ marginTop: 8 }}>{message}</p>}
     </main>
   );
 }
