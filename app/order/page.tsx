@@ -477,11 +477,15 @@ export default function OrderPage() {
       <nav
         style={{
           position: 'fixed',
-          left: 0,
-          right: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
           bottom: 0,
+          width: '100%',
+          maxWidth: 430,
           background: '#fff',
           borderTop: '1px solid #ddd6c9',
+          borderLeft: '1px solid #ddd6c9',
+          borderRight: '1px solid #ddd6c9',
           height: 64,
           display: 'grid',
           gridTemplateColumns: '1fr 1fr 1fr',
