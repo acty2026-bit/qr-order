@@ -60,6 +60,9 @@ export default function OrderPage() {
   const [cart, setCart] = useState<Cart>({});
   const [message, setMessage] = useState('');
   const [cartKey, setCartKey] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [repeatMenuIds, setRepeatMenuIds] = useState<string[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -106,19 +109,47 @@ export default function OrderPage() {
     sessionStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, cartKey]);
 
+  useEffect(() => {
+    if (!store || !tableNo) return;
+    fetch(`/api/order/repeat?store=${encodeURIComponent(store)}&table=${tableNo}`)
+      .then(async (r) => {
+        if (!r.ok) return { menuIds: [] as string[] };
+        return r.json();
+      })
+      .then((data) => setRepeatMenuIds(Array.isArray(data.menuIds) ? data.menuIds : []))
+      .catch(() => setRepeatMenuIds([]));
+  }, [store, tableNo]);
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const isMatch = (menu: Menu) => {
+    if (!normalizedSearch) return true;
+    return menu.name.toLowerCase().includes(normalizedSearch);
+  };
+
   const categoryMenus = useMemo(() => {
     const rows =
       activeCategory === 'food'
         ? menus.filter((menu) => menu.category === 'food' || menu.category === 'quick')
         : menus.filter((menu) => menu.category === activeCategory);
+    const matchedRows = rows.filter(isMatch);
     if (activeCategory === 'food') {
-      return rows.filter((menu) => (menu.foodSubCategory ?? 'small_dish') === activeFoodSubCategory);
+      return matchedRows.filter((menu) => (menu.foodSubCategory ?? 'small_dish') === activeFoodSubCategory);
     }
     if (activeCategory === 'drink') {
-      return rows.filter((menu) => (menu.drinkSubCategory ?? 'soft_drink') === activeDrinkSubCategory);
+      return matchedRows.filter((menu) => (menu.drinkSubCategory ?? 'soft_drink') === activeDrinkSubCategory);
     }
-    return rows;
-  }, [menus, activeCategory, activeFoodSubCategory, activeDrinkSubCategory]);
+    return matchedRows;
+  }, [menus, activeCategory, activeFoodSubCategory, activeDrinkSubCategory, normalizedSearch]);
+
+  const recommendationMenus = useMemo(
+    () => menus.filter((menu) => menu.category === 'recommendation' && isMatch(menu)),
+    [menus, normalizedSearch]
+  );
+
+  const repeatMenus = useMemo(
+    () => menus.filter((menu) => repeatMenuIds.includes(menu.id) && isMatch(menu)),
+    [menus, repeatMenuIds, normalizedSearch]
+  );
 
   const subtotal = Object.values(cart).reduce((sum, item) => sum + item.menu.price * item.qty, 0);
   const totalQty = Object.values(cart).reduce((sum, item) => sum + item.qty, 0);
@@ -160,6 +191,80 @@ export default function OrderPage() {
     router.push(`/order/review?store=${encodeURIComponent(store)}&table=${tableNo}`);
   };
 
+  const renderMenuCard = (menu: Menu, keyPrefix = '') => (
+    <div
+      key={`${keyPrefix}${menu.id}`}
+      className="card"
+      style={{
+        borderRadius: 24,
+        padding: 12,
+        opacity: menu.isSoldOut ? 0.5 : 1,
+        background: '#fff',
+        border: '1px solid #efe9df'
+      }}
+    >
+      <div style={{ display: 'grid', gridTemplateColumns: '84px 1fr', gap: 12, alignItems: 'center' }}>
+        <div
+          style={{
+            width: 84,
+            height: 84,
+            borderRadius: 16,
+            display: 'grid',
+            placeItems: 'center',
+            background: 'linear-gradient(145deg, #f3efe7, #fff)'
+          }}
+        >
+          <span style={{ fontSize: 44 }}>{icons[menu.category]}</span>
+        </div>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 19, lineHeight: 1.25 }}>{menu.name}</div>
+          {menu.isSoldOut ? (
+            <button className="btn-ghost" disabled style={{ marginTop: 8 }}>
+              売り切れ
+            </button>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, gap: 10 }}>
+              <div
+                style={{
+                  display: 'inline-grid',
+                  gridTemplateColumns: '36px 36px 36px',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  background: 'var(--bg)',
+                  borderRadius: 14
+                }}
+              >
+                <button
+                  className="btn-ghost"
+                  style={{ border: 0, background: 'transparent', borderRadius: 14 }}
+                  onClick={() => changeQty(menu.id, getQty(menu.id) - 1, menu)}
+                >
+                  -
+                </button>
+                <div style={{ fontWeight: 700 }}>{getQty(menu.id)}</div>
+                <button
+                  className="btn-ghost"
+                  style={{ border: 0, background: 'transparent', borderRadius: 14 }}
+                  onClick={() => changeQty(menu.id, getQty(menu.id) + 1, menu)}
+                >
+                  +
+                </button>
+              </div>
+              <div style={{ minWidth: 116, textAlign: 'right' }}>
+                <div style={{ fontSize: 19, fontWeight: 800, whiteSpace: 'nowrap', paddingRight: 10 }}>
+                  ￥{formatPrice(menu.price)}
+                </div>
+                <div style={{ fontSize: 12, color: '#8d877b', whiteSpace: 'nowrap' }}>
+                  （税込￥{formatPrice(taxIncluded(menu.price))}）
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <main style={{ maxWidth: 520, margin: '0 auto', padding: '16px 14px 220px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -169,8 +274,20 @@ export default function OrderPage() {
             {store || '-'} / T{tableNo || '-'}
           </div>
         </div>
-        <div style={{ fontSize: 22 }}>🛎️</div>
+        <button className="btn-ghost" style={{ borderRadius: 12 }} onClick={() => setIsSearchOpen((prev) => !prev)}>
+          🔍
+        </button>
       </div>
+
+      {isSearchOpen && (
+        <div style={{ marginBottom: 10 }}>
+          <input
+            placeholder="商品名で検索"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      )}
 
       <h1 style={{ margin: '0 0 10px', fontSize: 44, lineHeight: 1.02, letterSpacing: -1 }}>
         Hungry? <span style={{ color: '#8d877b', fontWeight: 400 }}>Order & Eat.</span>
@@ -276,6 +393,20 @@ export default function OrderPage() {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+        {recommendationMenus.length > 0 && (
+          <div className="card" style={{ borderRadius: 16, background: '#fff9ec' }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>おすすめ</div>
+            <div style={{ display: 'grid', gap: 8 }}>{recommendationMenus.slice(0, 3).map((menu) => renderMenuCard(menu, 'rec-'))}</div>
+          </div>
+        )}
+
+        {repeatMenus.length > 0 && (
+          <div className="card" style={{ borderRadius: 16, background: '#eef8f2' }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>おかわり</div>
+            <div style={{ display: 'grid', gap: 8 }}>{repeatMenus.slice(0, 3).map((menu) => renderMenuCard(menu, 'repeat-'))}</div>
+          </div>
+        )}
+
         {activeCategory === 'other' && (
           <div className="card" style={{ borderRadius: 24, padding: 14, border: '1px solid #efe9df' }}>
             <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>店員呼び出し</div>
@@ -285,79 +416,7 @@ export default function OrderPage() {
             </button>
           </div>
         )}
-        {categoryMenus.map((menu) => (
-          <div
-            key={menu.id}
-            className="card"
-            style={{
-              borderRadius: 24,
-              padding: 12,
-              opacity: menu.isSoldOut ? 0.5 : 1,
-              background: '#fff',
-              border: '1px solid #efe9df'
-            }}
-          >
-            <div style={{ display: 'grid', gridTemplateColumns: '84px 1fr', gap: 12, alignItems: 'center' }}>
-              <div
-                style={{
-                  width: 84,
-                  height: 84,
-                  borderRadius: 16,
-                  display: 'grid',
-                  placeItems: 'center',
-                  background: 'linear-gradient(145deg, #f3efe7, #fff)'
-                }}
-              >
-                <span style={{ fontSize: 44 }}>{icons[menu.category]}</span>
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 19, lineHeight: 1.25 }}>{menu.name}</div>
-                {menu.isSoldOut ? (
-                  <button className="btn-ghost" disabled style={{ marginTop: 8 }}>
-                    売り切れ
-                  </button>
-                ) : (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, gap: 10 }}>
-                    <div
-                      style={{
-                        display: 'inline-grid',
-                        gridTemplateColumns: '36px 36px 36px',
-                        alignItems: 'center',
-                        textAlign: 'center',
-                        background: 'var(--bg)',
-                        borderRadius: 14
-                      }}
-                    >
-                      <button
-                        className="btn-ghost"
-                        style={{ border: 0, background: 'transparent', borderRadius: 14 }}
-                        onClick={() => changeQty(menu.id, getQty(menu.id) - 1, menu)}
-                      >
-                        -
-                      </button>
-                      <div style={{ fontWeight: 700 }}>{getQty(menu.id)}</div>
-                      <button
-                        className="btn-ghost"
-                        style={{ border: 0, background: 'transparent', borderRadius: 14 }}
-                        onClick={() => changeQty(menu.id, getQty(menu.id) + 1, menu)}
-                      >
-                        +
-                      </button>
-                    </div>
-                    <div style={{ minWidth: 116, textAlign: 'right' }}>
-                      <div style={{ fontSize: 19, fontWeight: 800, whiteSpace: 'nowrap', paddingRight: 10 }}>
-                        ￥{formatPrice(menu.price)}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#8d877b', whiteSpace: 'nowrap' }}>
-                        （税込￥{formatPrice(taxIncluded(menu.price))}）
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+        {categoryMenus.map((menu) => renderMenuCard(menu))}
       </div>
 
       <div
