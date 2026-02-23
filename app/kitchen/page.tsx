@@ -9,6 +9,7 @@ type TableCard = {
   latestOrderAt: string;
   orderIds: string[];
   hasPendingPrint: boolean;
+  failedOrderIds: string[];
   items: Record<string, number>;
 };
 
@@ -83,6 +84,12 @@ export default function KitchenPage() {
     if (!data || !printerUrl) return;
 
     const adapter = new WebPrntAdapter(printerUrl);
+    const currentPendingOrderIds = new Set(data.pendingOrders.map((order) => order.id));
+    printed.current.forEach((orderId) => {
+      if (!currentPendingOrderIds.has(orderId)) {
+        printed.current.delete(orderId);
+      }
+    });
     const targetOrders = data.pendingOrders.filter((order) => !printed.current.has(order.id));
     for (const order of targetOrders) {
       printed.current.add(order.id);
@@ -136,6 +143,24 @@ export default function KitchenPage() {
     }
   };
 
+  const reprintFailed = async (tableNo: number, orderIds: string[]) => {
+    if (!orderIds.length) return;
+    const tasks = orderIds.map((orderId) =>
+      fetch('/api/admin/reprint', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId })
+      })
+    );
+    const results = await Promise.all(tasks);
+    const failed = results.filter((res) => !res.ok).length;
+    if (failed > 0) {
+      setMessage(`T${tableNo} 再印刷に失敗(${failed}件)`);
+      return;
+    }
+    setMessage(`T${tableNo} 再印刷をキューしました`);
+  };
+
   const activeCallsByTable = useMemo(() => {
     const map = new Map<number, string[]>();
     for (const call of data?.activeCalls ?? []) {
@@ -151,6 +176,10 @@ export default function KitchenPage() {
       <p>
         店舗: <b>{store || '-'}</b>
       </p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <a href={`/admin/menu?store=${encodeURIComponent(store)}`}>メニュー編集</a>
+        <a href={`/admin/ranking?store=${encodeURIComponent(store)}`}>ランキング</a>
+      </div>
 
       <div className="card" style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -195,6 +224,18 @@ export default function KitchenPage() {
                 </div>
               ))}
             </div>
+
+            {card.failedOrderIds.length > 0 && (
+              <div style={{ marginTop: 10, borderTop: '1px dashed #c77b7b', paddingTop: 8 }}>
+                <div style={{ marginBottom: 6, color: '#9d1f1f', fontWeight: 700 }}>印刷失敗あり</div>
+                <button
+                  className="btn-danger soft-blink"
+                  onClick={() => reprintFailed(card.tableNo, card.failedOrderIds)}
+                >
+                  再印刷 ({card.failedOrderIds.length})
+                </button>
+              </div>
+            )}
 
             {!!activeCallsByTable.get(card.tableNo)?.length && (
               <div style={{ marginTop: 10, borderTop: '1px dashed #cfb962', paddingTop: 8 }}>

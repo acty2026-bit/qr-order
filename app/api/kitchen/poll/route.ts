@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
     latestOrderAt: string;
     orderIds: string[];
     hasPendingPrint: boolean;
+    failedOrderIds: string[];
     items: Record<string, number>;
   }>();
 
@@ -49,12 +50,16 @@ export async function GET(req: NextRequest) {
         latestOrderAt: order.createdAt.toISOString(),
         orderIds: [],
         hasPendingPrint: false,
+        failedOrderIds: [],
         items: {}
       });
     }
     const row = byTable.get(order.tableNo)!;
     row.orderIds.push(order.id);
     row.hasPendingPrint = row.hasPendingPrint || order.printStatus === 'pending';
+    if (order.printStatus === 'failed') {
+      row.failedOrderIds.push(order.id);
+    }
     if (order.createdAt > new Date(row.latestOrderAt)) {
       row.latestOrderAt = order.createdAt.toISOString();
     }
