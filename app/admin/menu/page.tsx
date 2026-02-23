@@ -60,6 +60,7 @@ export default function AdminMenuPage() {
   );
   const [taxRate, setTaxRate] = useState(10);
   const [toast, setToast] = useState('');
+  const [draggingMenuId, setDraggingMenuId] = useState<string | null>(null);
 
   const load = async (storeKey: string) => {
     const res = await fetch(`/api/admin/menus?store=${encodeURIComponent(storeKey)}`);
@@ -154,6 +155,7 @@ export default function AdminMenuPage() {
 
   const createMenu = async () => {
     const parsed = parseCategoryChoice(form.category_choice);
+    const nextSortOrder = Math.max(0, ...menus.map((m) => m.sortOrder ?? 0)) + 1;
     const res = await fetch('/api/admin/menus', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -164,7 +166,8 @@ export default function AdminMenuPage() {
         category: parsed.category,
         food_sub_category: parsed.food_sub_category,
         drink_sub_category: parsed.drink_sub_category,
-        price: toInt(form.price)
+        price: toInt(form.price),
+        sort_order: nextSortOrder
       })
     });
 
@@ -200,6 +203,65 @@ export default function AdminMenuPage() {
       if (doneMessage) showToast(doneMessage);
     }
   };
+
+  const saveOrder = async (orderedIds: string[]) => {
+    const rankById = new Map(orderedIds.map((id, idx) => [id, idx + 1]));
+    const nextMenus = menus.map((menu) => (rankById.has(menu.id) ? { ...menu, sortOrder: rankById.get(menu.id)! } : menu));
+    setMenus(nextMenus);
+
+    const requests = orderedIds.map(async (id) => {
+      const menu = nextMenus.find((m) => m.id === id);
+      if (!menu) return true;
+      const parsed = parseCategoryChoice(menuToCategoryChoice(menu));
+      const res = await fetch('/api/admin/menus', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          id: menu.id,
+          name: menu.name,
+          name_kana: menu.nameKana,
+          category: parsed.category,
+          food_sub_category: parsed.food_sub_category,
+          drink_sub_category: parsed.drink_sub_category,
+          price: Number(menu.price),
+          is_sold_out: menu.isSoldOut,
+          sort_order: Number(menu.sortOrder)
+        })
+      });
+      return res.ok;
+    });
+
+    const result = await Promise.all(requests);
+    if (result.every(Boolean)) {
+      showToast('並び順を保存しました');
+    } else {
+      showToast('並び順の保存に失敗しました');
+    }
+  };
+
+  const moveMenu = async (targetId: string, orderedIds: string[]) => {
+    if (!draggingMenuId || draggingMenuId === targetId) return;
+    const sourceIndex = orderedIds.indexOf(draggingMenuId);
+    const targetIndex = orderedIds.indexOf(targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+
+    const nextOrderedIds = [...orderedIds];
+    const [moved] = nextOrderedIds.splice(sourceIndex, 1);
+    nextOrderedIds.splice(targetIndex, 0, moved);
+    await saveOrder(nextOrderedIds);
+  };
+
+  const getFilteredMenus = (source: Menu[]) => {
+    const rows = source.filter((menu) => {
+      if (menuFilter === 'all') return true;
+      if (menuFilter === 'food') return menu.category === 'food' || menu.category === 'quick';
+      return menu.category === menuFilter;
+    });
+    return [...rows].sort((a, b) => a.sortOrder - b.sortOrder);
+  };
+
+  const filteredMenus = getFilteredMenus(menus);
+  const filteredIds = filteredMenus.map((menu) => menu.id);
 
   const removeMenu = async (menu: Menu) => {
     const ok = window.confirm(`「${menu.name}」を削除しますがよろしいですか？`);
@@ -260,12 +322,6 @@ export default function AdminMenuPage() {
     color: '#666',
     pointerEvents: 'none' as const
   };
-
-  const filteredMenus = menus.filter((menu) => {
-    if (menuFilter === 'all') return true;
-    if (menuFilter === 'food') return menu.category === 'food' || menu.category === 'quick';
-    return menu.category === menuFilter;
-  });
 
   return (
     <main>
@@ -371,6 +427,7 @@ export default function AdminMenuPage() {
 
       <section className="card">
         <h2>既存メニュー編集</h2>
+        <div style={{ marginBottom: 8, color: '#666', fontSize: 13 }}>行をドラッグすると並び順が保存されます</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           <button className={menuFilter === 'all' ? 'btn-primary' : 'btn-ghost'} onClick={() => setMenuFilter('all')}>
             すべて
@@ -396,7 +453,26 @@ export default function AdminMenuPage() {
         </div>
 
         {filteredMenus.map((menu) => (
-          <div key={menu.id} style={{ borderBottom: '1px solid #eee', padding: '8px 0' }}>
+          <div
+            key={menu.id}
+            draggable
+            onDragStart={() => setDraggingMenuId(menu.id)}
+            onDragEnd={() => setDraggingMenuId(null)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              void moveMenu(menu.id, filteredIds);
+              setDraggingMenuId(null);
+            }}
+            style={{
+              borderBottom: '1px solid #eee',
+              padding: '8px 0',
+              cursor: 'grab',
+              opacity: draggingMenuId === menu.id ? 0.55 : 1,
+              background: draggingMenuId === menu.id ? '#f7f3e7' : 'transparent'
+            }}
+          >
+            <div style={{ fontSize: 12, color: '#8d877b', marginBottom: 6 }}>≡ ドラッグで並び替え</div>
             <div
               style={{
                 display: 'grid',

@@ -13,19 +13,12 @@ export async function GET(req: NextRequest) {
 
     const rawMenus = await prisma.menu.findMany({
       where: { storeId: store.id, deletedAt: null },
-      orderBy: [{ category: 'asc' }, { createdAt: 'asc' }]
-    });
-    const collator = new Intl.Collator('ja');
-    const menus = [...rawMenus].sort((a, b) => {
-      if (a.category !== b.category) return a.category.localeCompare(b.category);
-      const aKey = a.nameKana || a.name;
-      const bKey = b.nameKana || b.name;
-      return collator.compare(aKey, bKey);
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
     });
 
     return NextResponse.json({
       store: { id: store.id, name: store.name, storeKey: store.storeKey, taxRate: store.taxRate },
-      menus
+      menus: rawMenus
     });
   } catch {
     return badRequest('DB接続エラーです。DATABASE_URLとmigrateを確認してください', 500);

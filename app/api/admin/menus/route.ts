@@ -67,17 +67,9 @@ export async function GET(req: NextRequest) {
 
   const rawMenus = await prisma.menu.findMany({
     where: { storeId: store.id, deletedAt: null },
-    orderBy: [{ category: 'asc' }, { createdAt: 'asc' }]
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
   });
-  const collator = new Intl.Collator('ja');
-  const menus = [...rawMenus].sort((a, b) => {
-    if (a.category !== b.category) return a.category.localeCompare(b.category);
-    const aKey = a.nameKana || a.name;
-    const bKey = b.nameKana || b.name;
-    return collator.compare(aKey, bKey);
-  });
-
-  return NextResponse.json({ store, menus });
+  return NextResponse.json({ store, menus: rawMenus });
 }
 
 export async function POST(req: NextRequest) {
