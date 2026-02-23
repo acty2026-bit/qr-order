@@ -365,7 +365,18 @@ export default function OrderPage() {
         <div style={{ fontSize: 12, color: '#7a7469' }}>{store || '-'} / T{tableNo || '-'}</div>
         <button
           className="btn-danger"
-          style={{ position: 'absolute', right: 2, top: 8, width: 42, height: 42, borderRadius: 10 }}
+          style={{
+            position: 'absolute',
+            right: 2,
+            top: 8,
+            width: 56,
+            height: 42,
+            borderRadius: 10,
+            fontSize: 12,
+            lineHeight: 1,
+            padding: 0,
+            whiteSpace: 'nowrap'
+          }}
           onClick={callStaff}
         >
           呼出
