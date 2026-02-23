@@ -273,7 +273,6 @@ export default function OrderPage() {
   const railItems: RailKey[] = [
     'recommendation',
     'repeat',
-    'call',
     'drink',
     'dessert',
     'grill',
@@ -365,19 +364,17 @@ export default function OrderPage() {
         <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 2 }}>メニュー</div>
         <div style={{ fontSize: 12, color: '#7a7469' }}>{store || '-'} / T{tableNo || '-'}</div>
         <button
-          className="btn-ghost"
+          className="btn-danger"
           style={{ position: 'absolute', right: 2, top: 8, width: 42, height: 42, borderRadius: 10 }}
-          onClick={() => setIsSearchOpen((prev) => !prev)}
+          onClick={callStaff}
         >
-          🔍
+          呼出
         </button>
       </div>
 
-      {isSearchOpen && (
-        <div style={{ marginBottom: 8 }}>
-          <input placeholder="商品名で検索" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        </div>
-      )}
+      <div style={{ marginBottom: 8 }}>
+        <input placeholder="商品名で検索" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+      </div>
 
       {hasAllYouCanMenus && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
@@ -408,11 +405,6 @@ export default function OrderPage() {
               {labelMap[key]}
             </button>
           ))}
-          {activeRail === 'call' && (
-            <button className="btn-danger" style={{ height: 44 }} onClick={callStaff}>
-              呼び出す
-            </button>
-          )}
         </aside>
 
         <section style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
