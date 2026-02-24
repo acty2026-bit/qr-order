@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type Menu = {
@@ -124,6 +124,7 @@ export default function OrderPage() {
   const [repeatMenuIds, setRepeatMenuIds] = useState<string[]>([]);
   const [planTab, setPlanTab] = useState<'all' | 'houdai'>('all');
   const [activeRail, setActiveRail] = useState<RailKey>('recommendation');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -361,30 +362,35 @@ export default function OrderPage() {
   return (
     <main style={{ maxWidth: 430, margin: '0 auto', padding: '8px 10px 88px', background: '#f6f5f3', minHeight: '100dvh' }}>
       <div style={{ position: 'relative', textAlign: 'center', padding: '8px 0 10px' }}>
-        <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 2 }}>メニュー</div>
+        <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 2 }}>メニュー</div>
         <div style={{ fontSize: 12, color: '#7a7469' }}>{store || '-'} / T{tableNo || '-'}</div>
-        <button
-          className="btn-danger"
-          style={{
-            position: 'absolute',
-            right: 2,
-            top: 8,
-            width: 56,
-            height: 42,
-            borderRadius: 10,
-            fontSize: 12,
-            lineHeight: 1,
-            padding: 0,
-            whiteSpace: 'nowrap'
-          }}
-          onClick={callStaff}
-        >
-          呼出
-        </button>
+        <div style={{ position: 'absolute', right: 2, top: 8, display: 'flex', gap: 6 }}>
+          <button
+            className="btn-ghost"
+            style={{ width: 42, height: 42, borderRadius: 10, fontSize: 20, padding: 0 }}
+            onClick={() => searchInputRef.current?.focus()}
+            aria-label="検索"
+          >
+            🔍
+          </button>
+          <button
+            className="btn-danger"
+            style={{ width: 42, height: 42, borderRadius: 10, fontSize: 20, padding: 0 }}
+            onClick={callStaff}
+            aria-label="店員呼び出し"
+          >
+            🔔
+          </button>
+        </div>
       </div>
 
       <div style={{ marginBottom: 8 }}>
-        <input placeholder="商品名で検索" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <input
+          ref={searchInputRef}
+          placeholder="商品名で検索"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
       {hasAllYouCanMenus && (
