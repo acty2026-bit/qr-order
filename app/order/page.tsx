@@ -399,11 +399,40 @@ export default function OrderPage() {
       )}
 
       {hasAllYouCanMenus && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-          <button className={planTab === 'all' ? 'btn-primary' : 'btn-ghost'} onClick={() => setPlanTab('all')}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            marginBottom: 8,
+            borderBottom: '1px solid #e5dfd4'
+          }}
+        >
+          <button
+            onClick={() => setPlanTab('all')}
+            style={{
+              height: 44,
+              border: 0,
+              background: 'transparent',
+              fontSize: 20,
+              fontWeight: planTab === 'all' ? 800 : 500,
+              color: planTab === 'all' ? '#d26a00' : '#2a2824',
+              borderBottom: planTab === 'all' ? '4px solid #d26a00' : '4px solid transparent'
+            }}
+          >
             全て
           </button>
-          <button className={planTab === 'houdai' ? 'btn-primary' : 'btn-ghost'} onClick={() => setPlanTab('houdai')}>
+          <button
+            onClick={() => setPlanTab('houdai')}
+            style={{
+              height: 44,
+              border: 0,
+              background: 'transparent',
+              fontSize: 20,
+              fontWeight: planTab === 'houdai' ? 800 : 500,
+              color: planTab === 'houdai' ? '#d26a00' : '#2a2824',
+              borderBottom: planTab === 'houdai' ? '4px solid #d26a00' : '4px solid transparent'
+            }}
+          >
             放題
           </button>
         </div>
