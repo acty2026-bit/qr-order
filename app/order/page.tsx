@@ -403,14 +403,17 @@ export default function OrderPage() {
           {railItems.map((key) => (
             <button
               key={key}
-              className={activeRail === key ? 'btn-primary' : 'btn-ghost'}
+              className="btn-ghost"
               onClick={() => setActiveRail(key)}
               style={{
                 justifyContent: 'flex-start',
                 fontSize: 13,
                 borderRadius: 10,
                 height: 50,
-                borderLeft: `4px solid ${railColor[key]}`
+                borderLeft: `4px solid ${railColor[key]}`,
+                background: activeRail === key ? '#f4efe4' : '#fff',
+                color: activeRail === key ? '#2d2a24' : '#6d665c',
+                fontWeight: activeRail === key ? 700 : 500
               }}
             >
               {labelMap[key]}
@@ -449,7 +452,7 @@ export default function OrderPage() {
       >
         <div style={{ textAlign: 'center', lineHeight: 1.1 }}>
           <div style={{ fontSize: 20 }}>🛒</div>
-          <div style={{ fontSize: 11 }}>カート</div>
+          <div style={{ fontSize: 11 }}>注文へ進む</div>
         </div>
         {totalQty > 0 && (
           <span
