@@ -368,7 +368,10 @@ export default function OrderPage() {
           <button
             className="btn-ghost"
             style={{ width: 42, height: 42, borderRadius: 10, fontSize: 20, padding: 0 }}
-            onClick={() => searchInputRef.current?.focus()}
+            onClick={() => {
+              setIsSearchOpen((prev) => !prev);
+              window.setTimeout(() => searchInputRef.current?.focus(), 0);
+            }}
             aria-label="検索"
           >
             🔍
@@ -384,14 +387,16 @@ export default function OrderPage() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 8 }}>
-        <input
-          ref={searchInputRef}
-          placeholder="商品名で検索"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+      {isSearchOpen && (
+        <div style={{ marginBottom: 8 }}>
+          <input
+            ref={searchInputRef}
+            placeholder="商品名で検索"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      )}
 
       {hasAllYouCanMenus && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
