@@ -388,7 +388,16 @@ export default function OrderPage() {
           </button>
           <button
             className="btn-danger"
-            style={{ width: 42, height: 42, borderRadius: 10, fontSize: 20, padding: 0 }}
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 10,
+              fontSize: 20,
+              padding: 0,
+              background: '#f59b2e',
+              borderColor: '#f59b2e',
+              color: '#fff'
+            }}
             onClick={callStaff}
             aria-label="店員呼び出し"
           >
