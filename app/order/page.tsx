@@ -42,7 +42,7 @@ type RailKey =
 
 const labelMap: Record<RailKey, string> = {
   recommendation: 'おすすめ',
-  quick: 'とりあえず一品',
+  quick: 'おかわり',
   drink: 'ドリンク',
   salad: 'サラダ',
   grill: '焼き物',
@@ -86,6 +86,7 @@ export default function OrderPage() {
   const [cartKey, setCartKey] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [repeatMenuIds, setRepeatMenuIds] = useState<string[]>([]);
   const [planTab, setPlanTab] = useState<'all' | 'houdai'>('all');
   const [activeRail, setActiveRail] = useState<RailKey>('recommendation');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -135,6 +136,17 @@ export default function OrderPage() {
     sessionStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, cartKey]);
 
+  useEffect(() => {
+    if (!store || !tableNo) return;
+    fetch(`/api/order/repeat?store=${encodeURIComponent(store)}&table=${tableNo}`)
+      .then(async (r) => {
+        if (!r.ok) return { menuIds: [] as string[] };
+        return r.json();
+      })
+      .then((data) => setRepeatMenuIds(Array.isArray(data.menuIds) ? data.menuIds : []))
+      .catch(() => setRepeatMenuIds([]));
+  }, [store, tableNo]);
+
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const isMatch = (menu: Menu) => {
     if (!normalizedSearch) return true;
@@ -150,21 +162,23 @@ export default function OrderPage() {
     () => filteredByPlanAndSearch.filter((menu) => menu.category === 'recommendation'),
     [filteredByPlanAndSearch]
   );
+  const repeatMenus = useMemo(
+    () => filteredByPlanAndSearch.filter((menu) => repeatMenuIds.includes(menu.id)),
+    [filteredByPlanAndSearch, repeatMenuIds]
+  );
 
   const listMenus = useMemo(() => {
     if (activeRail === 'recommendation') return recommendationMenus;
-    if (activeRail === 'quick') return filteredByPlanAndSearch.filter((m) => m.category === 'quick');
+    if (activeRail === 'quick') return repeatMenus;
     if (activeRail === 'drink') return filteredByPlanAndSearch.filter((m) => m.category === 'drink');
     if (activeRail === 'salad') {
       return filteredByPlanAndSearch.filter(
-        (m) =>
-          (m.category === 'food' || m.category === 'quick') &&
-          ((m.foodSubCategory ?? 'small_dish') === 'seafood' || m.name.includes('サラダ'))
+        (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === 'seafood'
       );
     }
     if (activeRail === 'dessert') return filteredByPlanAndSearch.filter((m) => m.category === 'dessert');
     if (activeRail === 'otsumami') {
-      return filteredByPlanAndSearch.filter((m) => m.category === 'other' || m.name.includes('おつまみ'));
+      return filteredByPlanAndSearch.filter((m) => m.category === 'other');
     }
 
     if (['grill', 'fried', 'small_dish', 'rice'].includes(activeRail)) {
@@ -174,7 +188,7 @@ export default function OrderPage() {
     }
 
     return filteredByPlanAndSearch;
-  }, [activeRail, filteredByPlanAndSearch, recommendationMenus]);
+  }, [activeRail, filteredByPlanAndSearch, recommendationMenus, repeatMenus]);
 
   const subtotal = Object.values(cart).reduce((sum, item) => sum + item.menu.price * item.qty, 0);
   const totalQty = Object.values(cart).reduce((sum, item) => sum + item.qty, 0);

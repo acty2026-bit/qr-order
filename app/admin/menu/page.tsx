@@ -397,16 +397,16 @@ export default function AdminMenuPage() {
             onChange={(e) => setForm({ ...form, category_choice: e.target.value as CategoryChoice })}
           >
             <optgroup label="フード">
-              <option value="food:seafood">フード &gt; 海鮮</option>
-              <option value="food:grill">フード &gt; 焼き物</option>
-              <option value="food:fried">フード &gt; 揚げ物</option>
-              <option value="food:small_dish">フード &gt; 一品料理</option>
-              <option value="food:rice">フード &gt; ご飯物</option>
+              <option value="food:seafood">サラダ</option>
+              <option value="food:grill">焼き物</option>
+              <option value="food:fried">揚げ物</option>
+              <option value="food:small_dish">一品料理</option>
+              <option value="food:rice">ご飯物</option>
             </optgroup>
             <optgroup label="その他カテゴリ">
               <option value="recommendation">おすすめ</option>
               <option value="dessert">デザート</option>
-              <option value="other">その他</option>
+              <option value="other">おつまみ</option>
             </optgroup>
             <optgroup label="ドリンク">
               <option value="drink:beer">ドリンク &gt; ビール</option>
@@ -539,16 +539,16 @@ export default function AdminMenuPage() {
                 }}
               >
                 <optgroup label="フード">
-                  <option value="food:seafood">フード &gt; 海鮮</option>
-                  <option value="food:grill">フード &gt; 焼き物</option>
-                  <option value="food:fried">フード &gt; 揚げ物</option>
-                  <option value="food:small_dish">フード &gt; 一品料理</option>
-                  <option value="food:rice">フード &gt; ご飯物</option>
+                  <option value="food:seafood">サラダ</option>
+                  <option value="food:grill">焼き物</option>
+                  <option value="food:fried">揚げ物</option>
+                  <option value="food:small_dish">一品料理</option>
+                  <option value="food:rice">ご飯物</option>
                 </optgroup>
                 <optgroup label="その他カテゴリ">
                   <option value="recommendation">おすすめ</option>
                   <option value="dessert">デザート</option>
-                  <option value="other">その他</option>
+                  <option value="other">おつまみ</option>
                 </optgroup>
                 <optgroup label="ドリンク">
                   <option value="drink:beer">ドリンク &gt; ビール</option>
