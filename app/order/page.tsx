@@ -29,76 +29,41 @@ type Cart = Record<string, { menu: Menu; qty: number }>;
 
 type RailKey =
   | 'recommendation'
-  | 'repeat'
-  | 'call'
-  | 'food'
+  | 'quick'
   | 'drink'
-  | 'dessert'
-  | 'other'
-  | 'seafood'
+  | 'salad'
   | 'grill'
   | 'fried'
   | 'small_dish'
   | 'rice'
-  | 'beer'
-  | 'highball'
-  | 'sour'
-  | 'cocktail'
-  | 'shochu'
-  | 'sake'
-  | 'wine'
-  | 'fruit_liquor'
-  | 'non_alcohol'
-  | 'soft_drink';
+  | 'otsumami'
+  | 'dessert'
+  ;
 
 const labelMap: Record<RailKey, string> = {
   recommendation: 'おすすめ',
-  repeat: 'おかわり',
-  call: '店員呼出',
-  food: 'フード',
+  quick: 'とりあえず一品',
   drink: 'ドリンク',
-  dessert: '前菜',
-  other: 'その他',
-  seafood: '海鮮',
+  salad: 'サラダ',
   grill: '焼き物',
   fried: '揚げ物',
   small_dish: '一品料理',
   rice: 'ご飯物',
-  beer: 'ビール',
-  highball: 'ハイボール',
-  sour: 'サワー',
-  cocktail: 'カクテル',
-  shochu: '焼酎',
-  sake: '日本酒',
-  wine: 'ワイン',
-  fruit_liquor: '果実酒',
-  non_alcohol: 'ノンアル',
-  soft_drink: 'ソフトD'
+  otsumami: 'おつまみ',
+  dessert: 'デザート'
 };
 
 const railColor: Record<RailKey, string> = {
   recommendation: '#f8a94f',
-  repeat: '#8ecf57',
-  call: '#8ecf57',
-  food: '#63c255',
+  quick: '#f3c85a',
   drink: '#59b6ff',
-  dessert: '#f8a2c7',
-  other: '#b6b6b6',
-  seafood: '#5bc0de',
+  salad: '#8ad36d',
   grill: '#f3a84b',
   fried: '#f2cb4d',
   small_dish: '#8dcf50',
   rice: '#8b9ee8',
-  beer: '#ffc34d',
-  highball: '#ff9b54',
-  sour: '#7bd98f',
-  cocktail: '#ea8cff',
-  shochu: '#cda879',
-  sake: '#9ea7ff',
-  wine: '#d45c7d',
-  fruit_liquor: '#ff8ea7',
-  non_alcohol: '#67d2d1',
-  soft_drink: '#7cc5ff'
+  otsumami: '#b3b3b3',
+  dessert: '#f8a2c7'
 };
 
 const icons: Record<Menu['category'], string> = {
@@ -121,7 +86,6 @@ export default function OrderPage() {
   const [cartKey, setCartKey] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [repeatMenuIds, setRepeatMenuIds] = useState<string[]>([]);
   const [planTab, setPlanTab] = useState<'all' | 'houdai'>('all');
   const [activeRail, setActiveRail] = useState<RailKey>('recommendation');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -171,17 +135,6 @@ export default function OrderPage() {
     sessionStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, cartKey]);
 
-  useEffect(() => {
-    if (!store || !tableNo) return;
-    fetch(`/api/order/repeat?store=${encodeURIComponent(store)}&table=${tableNo}`)
-      .then(async (r) => {
-        if (!r.ok) return { menuIds: [] as string[] };
-        return r.json();
-      })
-      .then((data) => setRepeatMenuIds(Array.isArray(data.menuIds) ? data.menuIds : []))
-      .catch(() => setRepeatMenuIds([]));
-  }, [store, tableNo]);
-
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const isMatch = (menu: Menu) => {
     if (!normalizedSearch) return true;
@@ -198,33 +151,30 @@ export default function OrderPage() {
     [filteredByPlanAndSearch]
   );
 
-  const repeatMenus = useMemo(
-    () => filteredByPlanAndSearch.filter((menu) => repeatMenuIds.includes(menu.id)),
-    [filteredByPlanAndSearch, repeatMenuIds]
-  );
-
   const listMenus = useMemo(() => {
     if (activeRail === 'recommendation') return recommendationMenus;
-    if (activeRail === 'repeat') return repeatMenus;
-    if (activeRail === 'food') return filteredByPlanAndSearch.filter((m) => m.category === 'food' || m.category === 'quick');
+    if (activeRail === 'quick') return filteredByPlanAndSearch.filter((m) => m.category === 'quick');
     if (activeRail === 'drink') return filteredByPlanAndSearch.filter((m) => m.category === 'drink');
+    if (activeRail === 'salad') {
+      return filteredByPlanAndSearch.filter(
+        (m) =>
+          (m.category === 'food' || m.category === 'quick') &&
+          ((m.foodSubCategory ?? 'small_dish') === 'seafood' || m.name.includes('サラダ'))
+      );
+    }
     if (activeRail === 'dessert') return filteredByPlanAndSearch.filter((m) => m.category === 'dessert');
-    if (activeRail === 'other') return filteredByPlanAndSearch.filter((m) => m.category === 'other');
+    if (activeRail === 'otsumami') {
+      return filteredByPlanAndSearch.filter((m) => m.category === 'other' || m.name.includes('おつまみ'));
+    }
 
-    if (['seafood', 'grill', 'fried', 'small_dish', 'rice'].includes(activeRail)) {
+    if (['grill', 'fried', 'small_dish', 'rice'].includes(activeRail)) {
       return filteredByPlanAndSearch.filter(
         (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === activeRail
       );
     }
 
-    if (
-      ['beer', 'highball', 'sour', 'cocktail', 'shochu', 'sake', 'wine', 'fruit_liquor', 'non_alcohol', 'soft_drink'].includes(activeRail)
-    ) {
-      return filteredByPlanAndSearch.filter((m) => m.category === 'drink' && (m.drinkSubCategory ?? 'soft_drink') === activeRail);
-    }
-
     return filteredByPlanAndSearch;
-  }, [activeRail, filteredByPlanAndSearch, recommendationMenus, repeatMenus]);
+  }, [activeRail, filteredByPlanAndSearch, recommendationMenus]);
 
   const subtotal = Object.values(cart).reduce((sum, item) => sum + item.menu.price * item.qty, 0);
   const totalQty = Object.values(cart).reduce((sum, item) => sum + item.qty, 0);
@@ -273,13 +223,15 @@ export default function OrderPage() {
 
   const railItems: RailKey[] = [
     'recommendation',
-    'repeat',
+    'quick',
     'drink',
-    'dessert',
+    'salad',
     'grill',
     'fried',
     'small_dish',
-    'rice'
+    'rice',
+    'otsumami',
+    'dessert'
   ];
 
   const hasAllYouCanMenus = menus.some((menu) => menu.isAllYouCan);
