@@ -361,9 +361,19 @@ export default function OrderPage() {
 
   return (
     <main style={{ maxWidth: 430, margin: '0 auto', padding: '8px 10px 88px', background: '#f6f5f3', minHeight: '100dvh' }}>
-      <div style={{ position: 'relative', textAlign: 'center', padding: '8px 0 10px' }}>
+      <div
+        style={{
+          position: 'relative',
+          textAlign: 'center',
+          padding: '8px 0 10px',
+          marginBottom: 10,
+          boxShadow: '0 8px 14px -12px rgba(0, 0, 0, 0.45)'
+        }}
+      >
         <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 2 }}>メニュー</div>
-        <div style={{ fontSize: 12, color: '#7a7469' }}>{store || '-'} / T{tableNo || '-'}</div>
+        <div style={{ position: 'absolute', left: 2, top: 8, fontSize: 12, color: '#7a7469', fontWeight: 700 }}>
+          {store || '-'} / T{tableNo || '-'}
+        </div>
         <div style={{ position: 'absolute', right: 2, top: 8, display: 'flex', gap: 6 }}>
           <button
             className="btn-ghost"
