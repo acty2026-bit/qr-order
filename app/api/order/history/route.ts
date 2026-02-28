@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const store = await getStoreByKey(parsed.data.store);
   if (!store) return badRequest('store not found', 404);
 
-  const tableState = await prisma.tableState.findUnique({
+  const state = await prisma.tableState.findUnique({
     where: {
       storeId_tableNo: {
         storeId: store.id,
@@ -28,22 +28,36 @@ export async function GET(req: NextRequest) {
     }
   });
 
+  const where = {
+    storeId: store.id,
+    tableNo: parsed.data.table,
+    ...(state?.lastCheckoutAt ? { createdAt: { gte: state.lastCheckoutAt } } : {})
+  };
+
   const orders = await prisma.order.findMany({
-    where: {
-      storeId: store.id,
-      tableNo: parsed.data.table,
-      ...(tableState?.lastCheckoutAt ? { createdAt: { gte: tableState.lastCheckoutAt } } : {})
+    where,
+    include: {
+      orderItems: {
+        select: {
+          id: true,
+          nameSnapshot: true,
+          qty: true,
+          priceSnapshot: true
+        },
+        orderBy: { id: 'asc' }
+      }
     },
-    include: { orderItems: { select: { menuId: true } } },
     orderBy: { createdAt: 'desc' },
-    take: 200
+    take: 100
   });
 
-  const menuIds = Array.from(
-    new Set(
-      orders.flatMap((order) => order.orderItems.map((item) => item.menuId))
-    )
-  );
-
-  return NextResponse.json({ menuIds });
+  return NextResponse.json({
+    orders: orders.map((order) => ({
+      id: order.id,
+      createdAt: order.createdAt,
+      items: order.orderItems,
+      total: order.orderItems.reduce((sum, item) => sum + item.priceSnapshot * item.qty, 0)
+    })),
+    lastCheckoutAt: state?.lastCheckoutAt ?? null
+  });
 }

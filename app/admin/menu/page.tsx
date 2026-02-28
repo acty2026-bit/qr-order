@@ -7,7 +7,7 @@ type Menu = {
   name: string;
   nameKana: string;
   category: 'quick' | 'food' | 'recommendation' | 'drink' | 'dessert' | 'other';
-  foodSubCategory?: 'seafood' | 'grill' | 'fried' | 'small_dish' | 'rice' | null;
+  foodSubCategory?: 'seafood' | 'salad' | 'grill' | 'fried' | 'small_dish' | 'rice' | null;
   drinkSubCategory?:
     | 'beer'
     | 'highball'
@@ -22,12 +22,14 @@ type Menu = {
     | null;
   price: number;
   isAllYouCan: boolean;
+  isRecommended: boolean;
   isSoldOut: boolean;
   sortOrder: number;
 };
 
 type CategoryChoice =
   | 'food:seafood'
+  | 'food:salad'
   | 'food:grill'
   | 'food:fried'
   | 'food:small_dish'
@@ -42,7 +44,6 @@ type CategoryChoice =
   | 'drink:fruit_liquor'
   | 'drink:non_alcohol'
   | 'drink:soft_drink'
-  | 'recommendation'
   | 'drink'
   | 'dessert'
   | 'other';
@@ -57,12 +58,14 @@ export default function AdminMenuPage() {
     price: '',
     is_all_you_can: false
   });
-  const [menuFilter, setMenuFilter] = useState<'all' | 'food' | 'recommendation' | 'drink' | 'dessert' | 'other'>(
-    'all'
-  );
+  const [menuFilter, setMenuFilter] = useState<
+    'alcohol' | 'soft_drink' | 'seafood' | 'salad' | 'grill' | 'fried' | 'small_dish' | 'rice' | 'dessert' | 'other'
+  >('alcohol');
   const [taxRate, setTaxRate] = useState(10);
   const [toast, setToast] = useState('');
   const [draggingMenuId, setDraggingMenuId] = useState<string | null>(null);
+  const [savingAll, setSavingAll] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   const load = async (storeKey: string) => {
     const res = await fetch(`/api/admin/menus?store=${encodeURIComponent(storeKey)}`);
@@ -117,7 +120,7 @@ export default function AdminMenuPage() {
     if (choice.startsWith('food:')) {
       return {
         category: 'food' as const,
-        food_sub_category: choice.replace('food:', '') as 'seafood' | 'grill' | 'fried' | 'small_dish' | 'rice',
+        food_sub_category: choice.replace('food:', '') as 'seafood' | 'salad' | 'grill' | 'fried' | 'small_dish' | 'rice',
         drink_sub_category: null
       };
     }
@@ -139,7 +142,7 @@ export default function AdminMenuPage() {
       };
     }
     return {
-      category: choice as 'recommendation' | 'drink' | 'dessert' | 'other',
+      category: choice as 'drink' | 'dessert' | 'other',
       food_sub_category: null,
       drink_sub_category: null
     };
@@ -152,6 +155,7 @@ export default function AdminMenuPage() {
     if (menu.category === 'drink') {
       return `drink:${menu.drinkSubCategory ?? 'soft_drink'}` as CategoryChoice;
     }
+    if (menu.category === 'recommendation') return 'other';
     return menu.category as CategoryChoice;
   };
 
@@ -170,6 +174,7 @@ export default function AdminMenuPage() {
         drink_sub_category: parsed.drink_sub_category,
         price: toInt(form.price),
         is_all_you_can: form.is_all_you_can,
+        is_recommended: false,
         sort_order: nextSortOrder
       })
     });
@@ -196,6 +201,7 @@ export default function AdminMenuPage() {
         drink_sub_category: parsed.drink_sub_category,
         price: Number(menu.price),
         is_all_you_can: menu.isAllYouCan,
+        is_recommended: menu.isRecommended,
         is_sold_out: menu.isSoldOut,
         sort_order: Number(menu.sortOrder)
       })
@@ -212,36 +218,7 @@ export default function AdminMenuPage() {
     const rankById = new Map(orderedIds.map((id, idx) => [id, idx + 1]));
     const nextMenus = menus.map((menu) => (rankById.has(menu.id) ? { ...menu, sortOrder: rankById.get(menu.id)! } : menu));
     setMenus(nextMenus);
-
-    const requests = orderedIds.map(async (id) => {
-      const menu = nextMenus.find((m) => m.id === id);
-      if (!menu) return true;
-      const parsed = parseCategoryChoice(menuToCategoryChoice(menu));
-      const res = await fetch('/api/admin/menus', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          id: menu.id,
-          name: menu.name,
-          name_kana: menu.nameKana,
-          category: parsed.category,
-          food_sub_category: parsed.food_sub_category,
-          drink_sub_category: parsed.drink_sub_category,
-          price: Number(menu.price),
-          is_all_you_can: menu.isAllYouCan,
-          is_sold_out: menu.isSoldOut,
-          sort_order: Number(menu.sortOrder)
-        })
-      });
-      return res.ok;
-    });
-
-    const result = await Promise.all(requests);
-    if (result.every(Boolean)) {
-      showToast('並び順を保存しました');
-    } else {
-      showToast('並び順の保存に失敗しました');
-    }
+    setDirty(true);
   };
 
   const moveMenu = async (targetId: string, orderedIds: string[]) => {
@@ -257,10 +234,17 @@ export default function AdminMenuPage() {
   };
 
   const getFilteredMenus = (source: Menu[]) => {
+    const alcoholSubs = ['beer', 'highball', 'sour', 'cocktail', 'shochu', 'sake', 'wine', 'fruit_liquor'] as const;
     const rows = source.filter((menu) => {
-      if (menuFilter === 'all') return true;
-      if (menuFilter === 'food') return menu.category === 'food' || menu.category === 'quick';
-      return menu.category === menuFilter;
+      if (menuFilter === 'alcohol') {
+        return menu.category === 'drink' && alcoholSubs.includes((menu.drinkSubCategory ?? 'soft_drink') as (typeof alcoholSubs)[number]);
+      }
+      if (menuFilter === 'soft_drink') {
+        return menu.category === 'drink' && ['soft_drink', 'non_alcohol'].includes(menu.drinkSubCategory ?? 'soft_drink');
+      }
+      if (menuFilter === 'dessert') return menu.category === 'dessert';
+      if (menuFilter === 'other') return menu.category === 'other';
+      return (menu.category === 'food' || menu.category === 'quick') && (menu.foodSubCategory ?? 'small_dish') === menuFilter;
     });
     return [...rows].sort((a, b) => a.sortOrder - b.sortOrder);
   };
@@ -288,10 +272,48 @@ export default function AdminMenuPage() {
     showToast(json?.error ?? '削除に失敗しました');
   };
 
-  const toggleSoldOut = async (menu: Menu) => {
-    const next = { ...menu, isSoldOut: !menu.isSoldOut };
-    setMenus((prev) => prev.map((m) => (m.id === menu.id ? next : m)));
-    await updateMenu(next, next.isSoldOut ? '品切れにしました' : '品切れを解除しました');
+  const setMenuById = (id: string, updater: (m: Menu) => Menu) => {
+    setMenus((prev) => prev.map((m) => (m.id === id ? updater(m) : m)));
+    setDirty(true);
+  };
+
+  const toggleRecommended = (menu: Menu) => {
+    setMenuById(menu.id, (m) => ({ ...m, isRecommended: !m.isRecommended }));
+  };
+
+  const saveAllChanges = async () => {
+    setSavingAll(true);
+    const requests = menus.map(async (menu) => {
+      const parsed = parseCategoryChoice(menuToCategoryChoice(menu));
+      const res = await fetch('/api/admin/menus', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          id: menu.id,
+          name: menu.name,
+          name_kana: menu.nameKana,
+          category: parsed.category,
+          food_sub_category: parsed.food_sub_category,
+          drink_sub_category: parsed.drink_sub_category,
+          price: Number(menu.price),
+          is_all_you_can: menu.isAllYouCan,
+          is_recommended: menu.isRecommended,
+          is_sold_out: menu.isSoldOut,
+          sort_order: Number(menu.sortOrder)
+        })
+      });
+      return res.ok;
+    });
+
+    const result = await Promise.all(requests);
+    setSavingAll(false);
+    if (result.every(Boolean)) {
+      setDirty(false);
+      showToast('変更を保存しました');
+      void load(store);
+    } else {
+      showToast('保存に失敗した項目があります');
+    }
   };
 
   const changeTaxRate = async () => {
@@ -316,6 +338,7 @@ export default function AdminMenuPage() {
   };
 
   const controlStyle = { height: 42 };
+  const categoryFilterButtonStyle = { width: '100%', height: 40, padding: '0 8px' };
   const baseColumns = '2fr 1.4fr 1fr 1.6fr';
   const priceWrapStyle = { position: 'relative' as const, height: 42 };
   const priceInputStyle = { ...controlStyle, paddingRight: 28 };
@@ -397,28 +420,30 @@ export default function AdminMenuPage() {
             onChange={(e) => setForm({ ...form, category_choice: e.target.value as CategoryChoice })}
           >
             <optgroup label="フード">
-              <option value="food:seafood">サラダ</option>
+              <option value="food:seafood">海鮮</option>
+              <option value="food:salad">サラダ</option>
               <option value="food:grill">焼き物</option>
               <option value="food:fried">揚げ物</option>
               <option value="food:small_dish">一品料理</option>
               <option value="food:rice">ご飯物</option>
             </optgroup>
             <optgroup label="その他カテゴリ">
-              <option value="recommendation">おすすめ</option>
               <option value="dessert">デザート</option>
-              <option value="other">おつまみ</option>
+              <option value="other">その他</option>
             </optgroup>
-            <optgroup label="ドリンク">
-              <option value="drink:beer">ドリンク &gt; ビール</option>
-              <option value="drink:highball">ドリンク &gt; ハイボール</option>
-              <option value="drink:sour">ドリンク &gt; サワー・酎ハイ</option>
-              <option value="drink:cocktail">ドリンク &gt; カクテル</option>
-              <option value="drink:shochu">ドリンク &gt; 焼酎</option>
-              <option value="drink:sake">ドリンク &gt; 日本酒</option>
-              <option value="drink:wine">ドリンク &gt; ワイン</option>
-              <option value="drink:fruit_liquor">ドリンク &gt; 梅酒・果実酒</option>
-              <option value="drink:non_alcohol">ドリンク &gt; ノンアルコール</option>
-              <option value="drink:soft_drink">ドリンク &gt; ソフトドリンク</option>
+            <optgroup label="アルコール">
+              <option value="drink:beer">アルコール &gt; ビール</option>
+              <option value="drink:highball">アルコール &gt; ハイボール</option>
+              <option value="drink:sour">アルコール &gt; サワー・酎ハイ</option>
+              <option value="drink:cocktail">アルコール &gt; カクテル</option>
+              <option value="drink:shochu">アルコール &gt; 焼酎</option>
+              <option value="drink:sake">アルコール &gt; 日本酒</option>
+              <option value="drink:wine">アルコール &gt; ワイン</option>
+              <option value="drink:fruit_liquor">アルコール &gt; 梅酒・果実酒</option>
+            </optgroup>
+            <optgroup label="ソフトドリンク">
+              <option value="drink:soft_drink">ソフトドリンク</option>
+              <option value="drink:non_alcohol">ノンアルコール</option>
             </optgroup>
           </select>
           <button className="btn-primary" style={controlStyle} onClick={createMenu}>
@@ -438,30 +463,135 @@ export default function AdminMenuPage() {
       </section>
 
       <section className="card">
-        <h2>既存メニュー編集</h2>
-        <div style={{ marginBottom: 8, color: '#666', fontSize: 13 }}>行をドラッグすると並び順が保存されます</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <button className={menuFilter === 'all' ? 'btn-primary' : 'btn-ghost'} onClick={() => setMenuFilter('all')}>
-            すべて
-          </button>
-          <button className={menuFilter === 'food' ? 'btn-primary' : 'btn-ghost'} onClick={() => setMenuFilter('food')}>
-            フード
-          </button>
-          <button
-            className={menuFilter === 'recommendation' ? 'btn-primary' : 'btn-ghost'}
-            onClick={() => setMenuFilter('recommendation')}
+        <div
+          style={{
+            position: 'sticky',
+            top: 10,
+            zIndex: 8,
+            background: 'var(--paper)',
+            paddingBottom: 10,
+            marginBottom: 8
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 14
+            }}
           >
-            おすすめ
-          </button>
-          <button className={menuFilter === 'drink' ? 'btn-primary' : 'btn-ghost'} onClick={() => setMenuFilter('drink')}>
-            ドリンク
-          </button>
-          <button className={menuFilter === 'dessert' ? 'btn-primary' : 'btn-ghost'} onClick={() => setMenuFilter('dessert')}>
-            デザート
-          </button>
-          <button className={menuFilter === 'other' ? 'btn-primary' : 'btn-ghost'} onClick={() => setMenuFilter('other')}>
-            その他
-          </button>
+            <h2 style={{ margin: 0 }}>既存メニュー編集</h2>
+            <button className="btn-primary" onClick={saveAllChanges} disabled={savingAll || !dirty}>
+              {savingAll ? '保存中...' : '変更を保存'}
+            </button>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+              columnGap: 8,
+              rowGap: 8,
+              marginBottom: 25
+            }}
+          >
+            <button
+              className={menuFilter === 'alcohol' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('alcohol')}
+            >
+              アルコール
+            </button>
+            <button
+              className={menuFilter === 'soft_drink' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('soft_drink')}
+            >
+              ソフトドリンク
+            </button>
+            <button
+              className={menuFilter === 'seafood' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('seafood')}
+            >
+              海鮮
+            </button>
+            <button
+              className={menuFilter === 'salad' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('salad')}
+            >
+              サラダ
+            </button>
+            <button
+              className={menuFilter === 'grill' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('grill')}
+            >
+              焼き物
+            </button>
+            <button
+              className={menuFilter === 'fried' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('fried')}
+            >
+              揚げ物
+            </button>
+            <button
+              className={menuFilter === 'small_dish' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('small_dish')}
+            >
+              一品料理
+            </button>
+            <button
+              className={menuFilter === 'rice' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('rice')}
+            >
+              ご飯物
+            </button>
+            <button
+              className={menuFilter === 'dessert' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('dessert')}
+            >
+              デザート
+            </button>
+            <button
+              className={menuFilter === 'other' ? 'btn-primary' : 'btn-ghost'}
+              style={categoryFilterButtonStyle}
+              onClick={() => setMenuFilter('other')}
+            >
+              その他
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `48px ${baseColumns} 0.8fr 0.8fr 0.8fr 0.9fr`,
+              columnGap: 10,
+              rowGap: 8,
+              width: '100%',
+              fontSize: 15,
+              color: '#6d665c',
+              marginBottom: 4,
+              fontWeight: 700,
+              paddingBottom: 8,
+              borderBottom: '1px solid #ddd6c9'
+            }}
+          >
+            <div style={{ textAlign: 'center' }}>並替え</div>
+            <div>商品名</div>
+            <div>かな</div>
+            <div>金額</div>
+            <div>カテゴリ</div>
+            <div style={{ textAlign: 'center' }}>放題</div>
+            <div style={{ textAlign: 'center' }}>おすすめ</div>
+            <div style={{ textAlign: 'center' }}>品切れ</div>
+            <div style={{ textAlign: 'center' }}>削除</div>
+          </div>
         </div>
 
         {filteredMenus.map((menu) => (
@@ -478,33 +608,31 @@ export default function AdminMenuPage() {
             }}
             style={{
               borderBottom: '1px solid #eee',
-              padding: '8px 0',
+              padding: '4px 0',
               cursor: 'grab',
               opacity: draggingMenuId === menu.id ? 0.55 : 1,
               background: draggingMenuId === menu.id ? '#f7f3e7' : 'transparent'
             }}
           >
-            <div style={{ fontSize: 12, color: '#8d877b', marginBottom: 6 }}>≡ ドラッグで並び替え</div>
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: `${baseColumns} 0.9fr 0.9fr 0.9fr 0.9fr`,
+                gridTemplateColumns: `48px ${baseColumns} 0.8fr 0.8fr 0.8fr 0.9fr`,
                 columnGap: 10,
                 rowGap: 8,
                 width: '100%'
               }}
             >
+              <div style={{ display: 'grid', placeItems: 'center', height: 42, fontSize: 22, color: '#8d877b' }}>☰</div>
               <input
                 style={controlStyle}
                 value={menu.name}
-                onChange={(e) => setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, name: e.target.value } : m)))}
+                onChange={(e) => setMenuById(menu.id, (m) => ({ ...m, name: e.target.value }))}
               />
               <input
                 style={controlStyle}
                 value={menu.nameKana}
-                onChange={(e) =>
-                  setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, nameKana: e.target.value } : m)))
-                }
+                onChange={(e) => setMenuById(menu.id, (m) => ({ ...m, nameKana: e.target.value }))}
               />
               <div style={priceWrapStyle}>
                 <input
@@ -513,9 +641,7 @@ export default function AdminMenuPage() {
                   placeholder="金額"
                   style={priceInputStyle}
                   value={formatDigits(menu.price)}
-                  onChange={(e) =>
-                    setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, price: toInt(e.target.value) } : m)))
-                  }
+                  onChange={(e) => setMenuById(menu.id, (m) => ({ ...m, price: toInt(e.target.value) }))}
                 />
                 <span style={yenStyle}>円</span>
               </div>
@@ -524,64 +650,62 @@ export default function AdminMenuPage() {
                 value={menuToCategoryChoice(menu)}
                 onChange={(e) => {
                   const parsed = parseCategoryChoice(e.target.value as CategoryChoice);
-                  setMenus((prev) =>
-                    prev.map((m) =>
-                      m.id === menu.id
-                        ? {
-                            ...m,
-                            category: parsed.category,
-                            foodSubCategory: parsed.food_sub_category,
-                            drinkSubCategory: parsed.drink_sub_category
-                          }
-                        : m
-                    )
-                  );
+                  setMenuById(menu.id, (m) => ({
+                    ...m,
+                    category: parsed.category,
+                    foodSubCategory: parsed.food_sub_category,
+                    drinkSubCategory: parsed.drink_sub_category
+                  }));
                 }}
               >
                 <optgroup label="フード">
-                  <option value="food:seafood">サラダ</option>
+                  <option value="food:seafood">海鮮</option>
+                  <option value="food:salad">サラダ</option>
                   <option value="food:grill">焼き物</option>
                   <option value="food:fried">揚げ物</option>
                   <option value="food:small_dish">一品料理</option>
                   <option value="food:rice">ご飯物</option>
                 </optgroup>
                 <optgroup label="その他カテゴリ">
-                  <option value="recommendation">おすすめ</option>
                   <option value="dessert">デザート</option>
-                  <option value="other">おつまみ</option>
+                  <option value="other">その他</option>
                 </optgroup>
-                <optgroup label="ドリンク">
-                  <option value="drink:beer">ドリンク &gt; ビール</option>
-                  <option value="drink:highball">ドリンク &gt; ハイボール</option>
-                  <option value="drink:sour">ドリンク &gt; サワー・酎ハイ</option>
-                  <option value="drink:cocktail">ドリンク &gt; カクテル</option>
-                  <option value="drink:shochu">ドリンク &gt; 焼酎</option>
-                  <option value="drink:sake">ドリンク &gt; 日本酒</option>
-                  <option value="drink:wine">ドリンク &gt; ワイン</option>
-                  <option value="drink:fruit_liquor">ドリンク &gt; 梅酒・果実酒</option>
-                  <option value="drink:non_alcohol">ドリンク &gt; ノンアルコール</option>
-                  <option value="drink:soft_drink">ドリンク &gt; ソフトドリンク</option>
+                <optgroup label="アルコール">
+                  <option value="drink:beer">アルコール &gt; ビール</option>
+                  <option value="drink:highball">アルコール &gt; ハイボール</option>
+                  <option value="drink:sour">アルコール &gt; サワー・酎ハイ</option>
+                  <option value="drink:cocktail">アルコール &gt; カクテル</option>
+                  <option value="drink:shochu">アルコール &gt; 焼酎</option>
+                  <option value="drink:sake">アルコール &gt; 日本酒</option>
+                  <option value="drink:wine">アルコール &gt; ワイン</option>
+                  <option value="drink:fruit_liquor">アルコール &gt; 梅酒・果実酒</option>
+                </optgroup>
+                <optgroup label="ソフトドリンク">
+                  <option value="drink:soft_drink">ソフトドリンク</option>
+                  <option value="drink:non_alcohol">ノンアルコール</option>
                 </optgroup>
               </select>
-              <button
-                className={menu.isAllYouCan ? 'btn-primary' : 'btn-ghost'}
-                style={menu.isAllYouCan ? { ...controlStyle, background: '#1f5fd1', color: '#fff' } : controlStyle}
-                onClick={() =>
-                  setMenus((prev) => prev.map((m) => (m.id === menu.id ? { ...m, isAllYouCan: !m.isAllYouCan } : m)))
-                }
-              >
-                放題
-              </button>
-              <button
-                className={menu.isSoldOut ? 'btn-primary' : 'btn-ghost'}
-                style={menu.isSoldOut ? { ...controlStyle, background: '#1f5fd1', color: '#fff' } : controlStyle}
-                onClick={() => toggleSoldOut(menu)}
-              >
-                品切れ
-              </button>
-              <button className="btn-ghost" style={controlStyle} onClick={() => updateMenu(menu, '保存しました')}>
-                保存
-              </button>
+              <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
+                <input
+                  type="checkbox"
+                  checked={menu.isAllYouCan}
+                  onChange={() => setMenuById(menu.id, (m) => ({ ...m, isAllYouCan: !m.isAllYouCan }))}
+                />
+              </div>
+              <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
+                <input
+                  type="checkbox"
+                  checked={menu.isRecommended}
+                  onChange={() => toggleRecommended(menu)}
+                />
+              </div>
+              <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
+                <input
+                  type="checkbox"
+                  checked={menu.isSoldOut}
+                  onChange={() => setMenuById(menu.id, (m) => ({ ...m, isSoldOut: !m.isSoldOut }))}
+                />
+              </div>
               <button className="btn-danger" style={controlStyle} onClick={() => removeMenu(menu)}>
                 削除
               </button>

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const store = await getStoreByKey(storeKey);
   if (!store) return badRequest('store not found', 404);
 
-  const [orders, activeCalls, newOrders, newCalls] = await Promise.all([
+  const [orders, activeCalls, newOrders, newCalls, tableStates] = await Promise.all([
     prisma.order.findMany({
       where: { storeId: store.id },
       include: { orderItems: true },
@@ -26,16 +26,37 @@ export async function GET(req: NextRequest) {
     }),
     prisma.order.findMany({
       where: { storeId: store.id, createdAt: { gt: since } },
-      select: { id: true, createdAt: true }
+      select: { id: true, tableNo: true, createdAt: true }
     }),
     prisma.call.findMany({
       where: { storeId: store.id, createdAt: { gt: since }, acknowledgedAt: null },
-      select: { id: true, createdAt: true }
+      select: { id: true, tableNo: true, createdAt: true }
+    }),
+    prisma.tableState.findMany({
+      where: { storeId: store.id },
+      select: { tableNo: true, lastCheckoutAt: true, partySize: true }
     })
   ]);
 
+  const checkoutMap = new Map<number, Date>();
+  const partySizeMap = new Map<number, number | null>();
+  for (const s of tableStates) {
+    if (s.lastCheckoutAt) checkoutMap.set(s.tableNo, s.lastCheckoutAt);
+    partySizeMap.set(s.tableNo, s.partySize);
+  }
+  const isInCurrentSession = (tableNo: number, createdAt: Date) => {
+    const cutoff = checkoutMap.get(tableNo);
+    return !cutoff || createdAt >= cutoff;
+  };
+
+  const scopedOrders = orders.filter((order) => isInCurrentSession(order.tableNo, order.createdAt));
+  const scopedCalls = activeCalls.filter((call) => isInCurrentSession(call.tableNo, call.createdAt));
+  const scopedNewOrders = newOrders.filter((order) => isInCurrentSession(order.tableNo, order.createdAt));
+  const scopedNewCalls = newCalls.filter((call) => isInCurrentSession(call.tableNo, call.createdAt));
+
   const byTable = new Map<number, {
     tableNo: number;
+    partySize: number | null;
     latestOrderAt: string;
     orderIds: string[];
     hasPendingPrint: boolean;
@@ -43,10 +64,11 @@ export async function GET(req: NextRequest) {
     items: Record<string, number>;
   }>();
 
-  for (const order of orders) {
+  for (const order of scopedOrders) {
     if (!byTable.has(order.tableNo)) {
       byTable.set(order.tableNo, {
         tableNo: order.tableNo,
+        partySize: partySizeMap.get(order.tableNo) ?? null,
         latestOrderAt: order.createdAt.toISOString(),
         orderIds: [],
         hasPendingPrint: false,
@@ -71,10 +93,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     store: { id: store.id, name: store.name, storeKey: store.storeKey },
     tableCards: Array.from(byTable.values()).sort((a, b) => a.tableNo - b.tableNo),
-    activeCalls,
-    hasNewOrder: newOrders.length > 0,
-    hasNewCall: newCalls.length > 0,
-    pendingOrders: orders
+    activeCalls: scopedCalls,
+    hasNewOrder: scopedNewOrders.length > 0,
+    hasNewCall: scopedNewCalls.length > 0,
+    pendingOrders: scopedOrders
       .filter((o) => o.printStatus === 'pending')
       .map((o) => ({
         id: o.id,

@@ -8,7 +8,7 @@ export default function HomePage() {
         <li>/kitchen?store=demo-store</li>
         <li>/admin?store=demo-store</li>
         <li>/admin/menu?store=demo-store</li>
-        <li>/admin/ranking?store=demo-store</li>
+        <li>/admin/reports?store=demo-store</li>
       </ul>
     </main>
   );

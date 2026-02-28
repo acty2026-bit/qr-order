@@ -6,6 +6,7 @@ import { formatYmdHm } from '@/lib/time';
 
 type TableCard = {
   tableNo: number;
+  partySize: number | null;
   latestOrderAt: string;
   orderIds: string[];
   hasPendingPrint: boolean;
@@ -31,13 +32,20 @@ export default function KitchenPage() {
   const [store, setStore] = useState('');
   const [data, setData] = useState<KitchenPoll | null>(null);
   const [message, setMessage] = useState('通知を有効化してください');
+  const [toast, setToast] = useState('');
   const [notificationReady, setNotificationReady] = useState(false);
   const [printerUrl, setPrinterUrl] = useState('');
+  const [partySizeDrafts, setPartySizeDrafts] = useState<Record<number, string>>({});
 
   const orderAudio = useRef<HTMLAudioElement | null>(null);
   const callAudio = useRef<HTMLAudioElement | null>(null);
   const printed = useRef<Set<string>>(new Set());
   const lastPolledAt = useRef<string>(new Date().toISOString());
+
+  const showToast = (text: string) => {
+    setToast(text);
+    window.setTimeout(() => setToast(''), 1600);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -57,6 +65,13 @@ export default function KitchenPage() {
       if (!res.ok) return;
       const json = (await res.json()) as KitchenPoll;
       setData(json);
+      setPartySizeDrafts((prev) => {
+        const next: Record<number, string> = {};
+        for (const card of json.tableCards) {
+          next[card.tableNo] = prev[card.tableNo] ?? (card.partySize ? String(card.partySize) : '');
+        }
+        return next;
+      });
 
       if (notificationReady) {
         if (json.hasNewOrder) {
@@ -161,6 +176,69 @@ export default function KitchenPage() {
     setMessage(`T${tableNo} 再印刷をキューしました`);
   };
 
+  const checkoutTable = async (tableNo: number) => {
+    if (!store) return;
+    const ok = window.confirm(`T${tableNo} を会計確定して次の客に切り替えます。よろしいですか？`);
+    if (!ok) return;
+
+    const res = await fetch('/api/order/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ store_key: store, table_no: tableNo })
+    });
+
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setMessage(`T${tableNo} 会計確定失敗: ${json.error ?? 'unknown'}`);
+      return;
+    }
+
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tableCards: prev.tableCards.filter((card) => card.tableNo !== tableNo),
+        activeCalls: prev.activeCalls.filter((call) => call.tableNo !== tableNo),
+        pendingOrders: prev.pendingOrders.filter((order) => order.tableNo !== tableNo)
+      };
+    });
+    setMessage(`T${tableNo} 会計確定しました（次の客に切替）`);
+  };
+
+  const savePartySize = async (tableNo: number) => {
+    if (!store) return;
+    const raw = partySizeDrafts[tableNo] ?? '';
+    const partySize = Number(raw);
+    if (!Number.isInteger(partySize) || partySize <= 0 || partySize > 30) {
+      showToast(`T${tableNo} 来店人数は1〜30で入力してください`);
+      return;
+    }
+
+    const res = await fetch('/api/table/party-size', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        store_key: store,
+        table_no: tableNo,
+        party_size: partySize
+      })
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      showToast(`T${tableNo} 来店人数の保存失敗: ${json.error ?? 'unknown'}`);
+      return;
+    }
+
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tableCards: prev.tableCards.map((card) => (card.tableNo === tableNo ? { ...card, partySize } : card))
+      };
+    });
+    showToast(`T${tableNo} 来店人数を保存しました`);
+  };
+
   const activeCallsByTable = useMemo(() => {
     const map = new Map<number, string[]>();
     for (const call of data?.activeCalls ?? []) {
@@ -172,13 +250,33 @@ export default function KitchenPage() {
 
   return (
     <main>
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '42%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 45,
+            background: '#fff',
+            color: '#1f1f1b',
+            padding: '10px 14px',
+            borderRadius: 12,
+            border: '1px solid #ddd6c9',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
+            fontWeight: 700
+          }}
+        >
+          {toast}
+        </div>
+      )}
       <h1>厨房モニター</h1>
       <p>
         店舗: <b>{store || '-'}</b>
       </p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <a href={`/admin/menu?store=${encodeURIComponent(store)}`}>メニュー編集</a>
-        <a href={`/admin/ranking?store=${encodeURIComponent(store)}`}>ランキング</a>
+        <a href={`/admin/reports?store=${encodeURIComponent(store)}`}>売上レポート</a>
       </div>
 
       <div className="card" style={{ marginBottom: 12 }}>
@@ -225,6 +323,25 @@ export default function KitchenPage() {
               ))}
             </div>
 
+            <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <label style={{ fontWeight: 700 }}>来店人数</label>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={partySizeDrafts[card.tableNo] ?? ''}
+                onChange={(e) => {
+                  const normalized = e.target.value.replace(/[^\d]/g, '');
+                  setPartySizeDrafts((prev) => ({ ...prev, [card.tableNo]: normalized }));
+                }}
+                placeholder="人数"
+                style={{ width: 88, height: 38 }}
+              />
+              <button className="btn-ghost" style={{ height: 38 }} onClick={() => savePartySize(card.tableNo)}>
+                保存
+              </button>
+            </div>
+
             {card.failedOrderIds.length > 0 && (
               <div style={{ marginTop: 10, borderTop: '1px dashed #c77b7b', paddingTop: 8 }}>
                 <div style={{ marginBottom: 6, color: '#9d1f1f', fontWeight: 700 }}>印刷失敗あり</div>
@@ -247,6 +364,12 @@ export default function KitchenPage() {
                 ))}
               </div>
             )}
+
+            <div style={{ marginTop: 10, borderTop: '1px dashed #c8c8c8', paddingTop: 8 }}>
+              <button className="btn-primary" onClick={() => checkoutTable(card.tableNo)}>
+                会計してリセット
+              </button>
+            </div>
           </div>
         ))}
       </div>

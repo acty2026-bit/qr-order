@@ -62,7 +62,7 @@ export default function AdminPage() {
       </p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <a href={`/admin/menu?store=${encodeURIComponent(store)}`}>メニュー編集</a>
-        <a href={`/admin/ranking?store=${encodeURIComponent(store)}`}>ランキング</a>
+        <a href={`/admin/reports?store=${encodeURIComponent(store)}`}>売上レポート</a>
       </div>
 
       <section className="card" style={{ marginBottom: 12 }}>

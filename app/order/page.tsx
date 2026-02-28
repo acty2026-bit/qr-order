@@ -7,7 +7,7 @@ type Menu = {
   id: string;
   name: string;
   category: 'quick' | 'food' | 'recommendation' | 'drink' | 'dessert' | 'other';
-  foodSubCategory?: 'seafood' | 'grill' | 'fried' | 'small_dish' | 'rice' | null;
+  foodSubCategory?: 'seafood' | 'salad' | 'grill' | 'fried' | 'small_dish' | 'rice' | null;
   drinkSubCategory?:
     | 'beer'
     | 'highball'
@@ -22,6 +22,7 @@ type Menu = {
     | null;
   price: number;
   isAllYouCan: boolean;
+  isRecommended: boolean;
   isSoldOut: boolean;
 };
 
@@ -30,39 +31,45 @@ type Cart = Record<string, { menu: Menu; qty: number }>;
 type RailKey =
   | 'recommendation'
   | 'quick'
+  | 'alcohol'
   | 'drink'
+  | 'seafood'
   | 'salad'
   | 'grill'
   | 'fried'
   | 'small_dish'
   | 'rice'
-  | 'otsumami'
+  | 'other'
   | 'dessert'
   ;
 
 const labelMap: Record<RailKey, string> = {
   recommendation: 'おすすめ',
   quick: 'おかわり',
-  drink: 'ドリンク',
+  alcohol: 'アルコール',
+  drink: 'ソフトドリンク',
+  seafood: '海鮮',
   salad: 'サラダ',
   grill: '焼き物',
   fried: '揚げ物',
   small_dish: '一品料理',
   rice: 'ご飯物',
-  otsumami: 'おつまみ',
+  other: 'その他',
   dessert: 'デザート'
 };
 
 const railColor: Record<RailKey, string> = {
   recommendation: '#f8a94f',
   quick: '#f3c85a',
+  alcohol: '#5a9ce6',
   drink: '#59b6ff',
+  seafood: '#5bc0de',
   salad: '#8ad36d',
   grill: '#f3a84b',
   fried: '#f2cb4d',
   small_dish: '#8dcf50',
   rice: '#8b9ee8',
-  otsumami: '#b3b3b3',
+  other: '#b3b3b3',
   dessert: '#f8a2c7'
 };
 
@@ -83,13 +90,45 @@ export default function OrderPage() {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [cart, setCart] = useState<Cart>({});
   const [message, setMessage] = useState('');
+  const [toast, setToast] = useState('');
   const [cartKey, setCartKey] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [repeatMenuIds, setRepeatMenuIds] = useState<string[]>([]);
   const [planTab, setPlanTab] = useState<'all' | 'houdai'>('all');
   const [activeRail, setActiveRail] = useState<RailKey>('recommendation');
+  const [activeAlcoholSub, setActiveAlcoholSub] = useState<
+    'all' | 'beer' | 'highball' | 'sour' | 'cocktail' | 'shochu' | 'sake' | 'wine'
+  >('all');
+  const prevPlanTabRef = useRef<'all' | 'houdai'>('all');
+  const [viewportHeight, setViewportHeight] = useState(800);
+  const [viewportWidth, setViewportWidth] = useState(390);
+  const [chromeHeight, setChromeHeight] = useState(180);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const searchWrapRef = useRef<HTMLDivElement | null>(null);
+  const planWrapRef = useRef<HTMLDivElement | null>(null);
+  const hasAllYouCanMenus = menus.some((menu) => menu.isAllYouCan);
+
+  useEffect(() => {
+    if (planTab !== 'houdai') return;
+    const updateViewport = () => {
+      setViewportHeight(window.innerHeight);
+      setViewportWidth(window.innerWidth);
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
+
+  useEffect(() => {
+    const nextChromeHeight =
+      (headerRef.current?.offsetHeight ?? 0) +
+      (searchWrapRef.current?.offsetHeight ?? 0) +
+      (planWrapRef.current?.offsetHeight ?? 0) +
+      28;
+    if (nextChromeHeight > 0) setChromeHeight(nextChromeHeight);
+  }, [viewportHeight, viewportWidth, isSearchOpen, hasAllYouCanMenus, planTab, menus.length]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -110,7 +149,10 @@ export default function OrderPage() {
     }
 
     if (params.get('ordered') === '1') {
-      setMessage('注文を送信しました。');
+      showToast('注文が送信されました');
+      const next = new URL(window.location.href);
+      next.searchParams.delete('ordered');
+      window.history.replaceState({}, '', next.toString());
     }
 
     if (!storeKey) return;
@@ -148,6 +190,10 @@ export default function OrderPage() {
   }, [store, tableNo]);
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
+  const showToast = (text: string) => {
+    setToast(text);
+    window.setTimeout(() => setToast(''), 2000);
+  };
   const isMatch = (menu: Menu) => {
     if (!normalizedSearch) return true;
     return menu.name.toLowerCase().includes(normalizedSearch);
@@ -159,27 +205,51 @@ export default function OrderPage() {
   );
 
   const recommendationMenus = useMemo(
-    () => filteredByPlanAndSearch.filter((menu) => menu.category === 'recommendation'),
+    () => filteredByPlanAndSearch.filter((menu) => menu.isRecommended),
     [filteredByPlanAndSearch]
   );
   const repeatMenus = useMemo(
-    () => filteredByPlanAndSearch.filter((menu) => repeatMenuIds.includes(menu.id)),
+    () =>
+      filteredByPlanAndSearch
+        .filter((menu) => repeatMenuIds.includes(menu.id))
+        .sort((a, b) => {
+          const ai = repeatMenuIds.indexOf(a.id);
+          const bi = repeatMenuIds.indexOf(b.id);
+          return ai - bi;
+        }),
     [filteredByPlanAndSearch, repeatMenuIds]
   );
 
   const listMenus = useMemo(() => {
+    const drinkRows = filteredByPlanAndSearch.filter((m) => m.category === 'drink');
+    const drinkSub = (menu: Menu) => menu.drinkSubCategory ?? 'soft_drink';
+    const alcoholSubs = ['beer', 'highball', 'sour', 'cocktail', 'shochu', 'sake', 'wine', 'fruit_liquor'] as const;
+
     if (activeRail === 'recommendation') return recommendationMenus;
     if (activeRail === 'quick') return repeatMenus;
-    if (activeRail === 'drink') return filteredByPlanAndSearch.filter((m) => m.category === 'drink');
-    if (activeRail === 'salad') {
+    if (activeRail === 'alcohol') {
+      const alcoholRows = drinkRows.filter((m) => alcoholSubs.includes(drinkSub(m) as (typeof alcoholSubs)[number]));
+      if (activeAlcoholSub === 'all') return alcoholRows;
+      return alcoholRows.filter((m) => drinkSub(m) === activeAlcoholSub);
+    }
+    if (activeRail === 'drink') {
+      return drinkRows.filter((m) => {
+        const sub = drinkSub(m);
+        return sub === 'soft_drink' || sub === 'non_alcohol';
+      });
+    }
+    if (activeRail === 'seafood') {
       return filteredByPlanAndSearch.filter(
         (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === 'seafood'
       );
     }
-    if (activeRail === 'dessert') return filteredByPlanAndSearch.filter((m) => m.category === 'dessert');
-    if (activeRail === 'otsumami') {
-      return filteredByPlanAndSearch.filter((m) => m.category === 'other');
+    if (activeRail === 'salad') {
+      return filteredByPlanAndSearch.filter(
+        (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === 'salad'
+      );
     }
+    if (activeRail === 'other') return filteredByPlanAndSearch.filter((m) => m.category === 'other');
+    if (activeRail === 'dessert') return filteredByPlanAndSearch.filter((m) => m.category === 'dessert');
 
     if (['grill', 'fried', 'small_dish', 'rice'].includes(activeRail)) {
       return filteredByPlanAndSearch.filter(
@@ -188,7 +258,7 @@ export default function OrderPage() {
     }
 
     return filteredByPlanAndSearch;
-  }, [activeRail, filteredByPlanAndSearch, recommendationMenus, repeatMenus]);
+  }, [activeRail, filteredByPlanAndSearch, recommendationMenus, repeatMenus, activeAlcoholSub]);
 
   const subtotal = Object.values(cart).reduce((sum, item) => sum + item.menu.price * item.qty, 0);
   const totalQty = Object.values(cart).reduce((sum, item) => sum + item.qty, 0);
@@ -218,7 +288,7 @@ export default function OrderPage() {
       body: JSON.stringify({ store_key: store, table_no: tableNo })
     });
     if (res.ok) {
-      setMessage('店員を呼び出しました。');
+      showToast('店員を呼び出しました');
     }
   };
 
@@ -230,6 +300,10 @@ export default function OrderPage() {
     router.push(`/order/review?store=${encodeURIComponent(store)}&table=${tableNo}`);
   };
 
+  const goToHistory = () => {
+    router.push(`/order/history?store=${encodeURIComponent(store)}&table=${tableNo}`);
+  };
+
   const shareQr = () => {
     const shareUrl = `${window.location.origin}/order?store=${encodeURIComponent(store)}&table=${tableNo}`;
     window.prompt('同じテーブル共有用URL', shareUrl);
@@ -238,17 +312,87 @@ export default function OrderPage() {
   const railItems: RailKey[] = [
     'recommendation',
     'quick',
+    'alcohol',
     'drink',
+    'seafood',
     'salad',
     'grill',
     'fried',
     'small_dish',
     'rice',
-    'otsumami',
-    'dessert'
+    'dessert',
+    'other'
   ];
 
-  const hasAllYouCanMenus = menus.some((menu) => menu.isAllYouCan);
+  useEffect(() => {
+    const prevPlanTab = prevPlanTabRef.current;
+    prevPlanTabRef.current = planTab;
+    if (prevPlanTab === planTab) return;
+    if (planTab !== 'houdai') return;
+
+    const drinkSub = (menu: Menu) => menu.drinkSubCategory ?? 'soft_drink';
+    const alcoholSubs = ['beer', 'highball', 'sour', 'cocktail', 'shochu', 'sake', 'wine', 'fruit_liquor'] as const;
+    const hasInRail = (rail: RailKey) => {
+      if (rail === 'recommendation') return recommendationMenus.length > 0;
+      if (rail === 'quick') return repeatMenus.length > 0;
+      if (rail === 'alcohol') {
+        return filteredByPlanAndSearch.some(
+          (m) => m.category === 'drink' && alcoholSubs.includes(drinkSub(m) as (typeof alcoholSubs)[number])
+        );
+      }
+      if (rail === 'drink') {
+        return filteredByPlanAndSearch.some((m) => m.category === 'drink' && ['soft_drink', 'non_alcohol'].includes(drinkSub(m)));
+      }
+      if (rail === 'seafood') {
+        return filteredByPlanAndSearch.some(
+          (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === 'seafood'
+        );
+      }
+      if (rail === 'salad') {
+        return filteredByPlanAndSearch.some(
+          (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === 'salad'
+        );
+      }
+      if (rail === 'grill') {
+        return filteredByPlanAndSearch.some(
+          (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === 'grill'
+        );
+      }
+      if (rail === 'fried') {
+        return filteredByPlanAndSearch.some(
+          (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === 'fried'
+        );
+      }
+      if (rail === 'small_dish') {
+        return filteredByPlanAndSearch.some(
+          (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === 'small_dish'
+        );
+      }
+      if (rail === 'rice') {
+        return filteredByPlanAndSearch.some(
+          (m) => (m.category === 'food' || m.category === 'quick') && (m.foodSubCategory ?? 'small_dish') === 'rice'
+        );
+      }
+      if (rail === 'dessert') return filteredByPlanAndSearch.some((m) => m.category === 'dessert');
+      if (rail === 'other') return filteredByPlanAndSearch.some((m) => m.category === 'other');
+      return false;
+    };
+
+    if (hasInRail(activeRail)) return;
+    const fallbackRail = railItems.find((rail) => hasInRail(rail));
+    if (fallbackRail) setActiveRail(fallbackRail);
+  }, [activeRail, filteredByPlanAndSearch, recommendationMenus, repeatMenus, planTab]);
+
+  const mainWidth = Math.min(430, Math.max(320, viewportWidth));
+  const isCompactPhone = mainWidth <= 360;
+  const railWidth = mainWidth <= 350 ? 94 : mainWidth <= 390 ? 106 : 116;
+  const footerHeight = 64;
+  const scrollPaneHeight = Math.max(260, viewportHeight - chromeHeight - footerHeight - 6);
+  const railGap = 6;
+  const railButtonHeight = isCompactPhone ? 46 : 52;
+
+  const imageSize = isCompactPhone ? 84 : 96;
+  const railFontSize = isCompactPhone ? 12 : 13;
 
   const renderMenuCard = (menu: Menu) => (
     <div
@@ -256,7 +400,7 @@ export default function OrderPage() {
       className="card"
       style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 96px',
+        gridTemplateColumns: `1fr ${imageSize}px`,
         gap: 8,
         padding: 10,
         borderRadius: 12,
@@ -266,7 +410,7 @@ export default function OrderPage() {
       }}
     >
       <div>
-        <div style={{ fontWeight: 800, fontSize: 18, lineHeight: 1.25 }}>{menu.name}</div>
+        <div style={{ fontWeight: 800, fontSize: isCompactPhone ? 16 : 18, lineHeight: 1.25 }}>{menu.name}</div>
         <div style={{ marginTop: 4, color: '#666', fontWeight: 700 }}>￥{formatPrice(menu.price)}</div>
         <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
           <div
@@ -311,13 +455,13 @@ export default function OrderPage() {
       </div>
       <div
         style={{
-          width: 96,
-          height: 96,
+          width: imageSize,
+          height: imageSize,
           borderRadius: 10,
           background: 'linear-gradient(145deg, #f4f0e9, #ffffff)',
           display: 'grid',
           placeItems: 'center',
-          fontSize: 48
+          fontSize: isCompactPhone ? 42 : 48
         }}
       >
         {icons[menu.category]}
@@ -326,8 +470,19 @@ export default function OrderPage() {
   );
 
   return (
-    <main style={{ maxWidth: 430, margin: '0 auto', padding: '8px 10px 88px', background: '#f6f5f3', minHeight: '100dvh' }}>
+    <main
+      style={{
+        maxWidth: 430,
+        width: '100%',
+        margin: '0 auto',
+        padding: '8px 10px 66px',
+        background: '#f6f5f3',
+        minHeight: '100dvh',
+        boxSizing: 'border-box'
+      }}
+    >
       <div
+        ref={headerRef}
         style={{
           position: 'relative',
           textAlign: 'center',
@@ -373,7 +528,7 @@ export default function OrderPage() {
       </div>
 
       {isSearchOpen && (
-        <div style={{ marginBottom: 8 }}>
+        <div ref={searchWrapRef} style={{ marginBottom: 8 }}>
           <input
             ref={searchInputRef}
             placeholder="商品名で検索"
@@ -385,6 +540,7 @@ export default function OrderPage() {
 
       {hasAllYouCanMenus && (
         <div
+          ref={planWrapRef}
           style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
@@ -423,8 +579,24 @@ export default function OrderPage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '98px 1fr', gap: 8 }}>
-        <aside style={{ display: 'grid', gap: 6, alignContent: 'start' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `${railWidth}px 1fr`,
+          gap: 8
+        }}
+      >
+        <aside
+          className="hide-scrollbar"
+          style={{
+            display: 'grid',
+            gap: railGap,
+            alignContent: 'start',
+            maxHeight: `${scrollPaneHeight}px`,
+            overflowY: 'auto',
+            paddingRight: 2
+          }}
+        >
           {railItems.map((key) => (
             <button
               key={key}
@@ -432,12 +604,16 @@ export default function OrderPage() {
               onClick={() => setActiveRail(key)}
               style={{
                 justifyContent: 'flex-start',
-                fontSize: 13,
+                fontSize: railFontSize,
                 borderRadius: 10,
-                height: 50,
+                height: railButtonHeight,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                padding: '0 6px',
                 borderLeft: `4px solid ${railColor[key]}`,
-                background: activeRail === key ? '#f4efe4' : '#fff',
-                color: activeRail === key ? '#2d2a24' : '#6d665c',
+                background: activeRail === key ? '#fdf0dd' : '#fff',
+                color: activeRail === key ? '#7a4a12' : '#6d665c',
                 fontWeight: activeRail === key ? 700 : 500
               }}
             >
@@ -446,7 +622,62 @@ export default function OrderPage() {
           ))}
         </aside>
 
-        <section style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
+        <section
+          className="hide-scrollbar"
+          style={{
+            display: 'grid',
+            gap: 8,
+            alignContent: 'start',
+            maxHeight: `${scrollPaneHeight}px`,
+            overflowY: 'auto',
+            paddingRight: 2
+          }}
+        >
+          {activeRail === 'alcohol' && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                gap: 6,
+                paddingBottom: 2
+              }}
+            >
+              {(
+                [
+                  ['all', 'すべて'],
+                  ['beer', 'ビール'],
+                  ['sour', 'サワー'],
+                  ['highball', 'ハイボール'],
+                  ['cocktail', 'カクテル'],
+                  ['shochu', '焼酎'],
+                  ['sake', '日本酒'],
+                  ['wine', 'ワイン']
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  className="btn-ghost"
+                  onClick={() => setActiveAlcoholSub(key)}
+                  style={{
+                    width: '100%',
+                    height: 34,
+                    borderRadius: 10,
+                    fontSize: isCompactPhone ? 10 : 11,
+                    padding: 0,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    background: activeAlcoholSub === key ? '#fdf0dd' : '#fff',
+                    color: activeAlcoholSub === key ? '#7a4a12' : '#4e463d',
+                    borderColor: activeAlcoholSub === key ? '#f0c38a' : undefined,
+                    fontWeight: activeAlcoholSub === key ? 700 : 500
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           {listMenus.length === 0 && (
             <div className="card" style={{ padding: 16, color: '#767068' }}>
               表示できる商品がありません
@@ -524,7 +755,7 @@ export default function OrderPage() {
           <div>🍴</div>
           <div style={{ fontSize: 12 }}>メニュー</div>
         </button>
-        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={goToReview}>
+        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={goToHistory}>
           <div>🕘</div>
           <div style={{ fontSize: 12 }}>履歴</div>
         </button>
@@ -533,6 +764,28 @@ export default function OrderPage() {
           <div style={{ fontSize: 12 }}>QR</div>
         </button>
       </nav>
+
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            left: '50%',
+            top: '46%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 50,
+            background: '#fff',
+            color: '#222',
+            padding: '12px 18px',
+            borderRadius: 12,
+            border: '1px solid #e4ddd1',
+            boxShadow: '0 10px 22px rgba(0, 0, 0, 0.16)',
+            fontWeight: 700,
+            animation: 'toast-fade 2s ease-in-out'
+          }}
+        >
+          {toast}
+        </div>
+      )}
 
       <div style={{ display: 'none' }}>￥{formatPrice(taxIncluded(subtotal))}</div>
       {message && <p style={{ marginTop: 8 }}>{message}</p>}

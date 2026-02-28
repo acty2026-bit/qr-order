@@ -37,7 +37,10 @@ npm run dev
 - 厨房: `/kitchen?store=demo-store`
 - 管理: `/admin?store=demo-store`
 - メニュー編集: `/admin/menu?store=demo-store`
-- ランキング: `/admin/ranking?store=demo-store`
+- レポート入口: `/admin/reports?store=demo-store`
+- 日次レポート: `/admin/reports/daily?store=demo-store`
+- 期間レポート: `/admin/reports/range?store=demo-store`
+- 年次レポート: `/admin/reports/yearly?store=demo-store`
 
 ## 3. 実装ポイント
 
@@ -49,7 +52,6 @@ npm run dev
 - 印刷は厨房ブラウザから `WebPrntAdapter` を使い Star WebPRNT 実行
 - 印刷結果は `orders.print_status` / `orders.print_error_message` に反映
 - 管理画面で直近10件の再印刷（`print_status = pending` に戻して厨房で再実行）
-- ランキングは JST の「今日」でカテゴリ別TOP
 
 ## 4. WebPRNT 設定メモ
 
@@ -99,5 +101,35 @@ npm run dev
 - `GET /api/admin/orders?store=...`
 - `POST /api/admin/reprint`
 - `GET/POST/PUT/DELETE /api/admin/menus`
-- `GET /api/admin/ranking?store=...`
 - `POST /api/print/report`
+- `GET /api/reports/daily?store=...&date=YYYY-MM-DD`
+- `GET /api/reports/range?store=...&start=YYYY-MM-DD&end=YYYY-MM-DD`
+- `GET /api/reports/yearly?store=...&year=YYYY`
+
+## 7. 売上レポートの確認手順
+
+1) 管理画面から開く
+
+- 入口: `/admin/reports?store=demo-store`
+- 日次: `/admin/reports/daily?store=demo-store`
+- 期間: `/admin/reports/range?store=demo-store`
+- 年次: `/admin/reports/yearly?store=demo-store`
+
+2) APIを直接確認する（curl例）
+
+```bash
+# 日次（date省略時は昨日JST）
+curl "http://localhost:3000/api/reports/daily?store=demo-store&date=2026-02-27"
+
+# 期間
+curl "http://localhost:3000/api/reports/range?store=demo-store&start=2026-02-01&end=2026-02-27"
+
+# 年次
+curl "http://localhost:3000/api/reports/yearly?store=demo-store&year=2026"
+```
+
+3) 集計の仕様
+
+- 日付集計は `Asia/Tokyo (JST)` 基準
+- 売上は `order_items.price_snapshot * qty` の合計
+- 客数は `orders.table_no` のユニーク数（0件時は注文件数を代替）

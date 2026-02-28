@@ -9,7 +9,7 @@ const createSchema = z.object({
   name: z.string().min(1),
   name_kana: z.string().optional().default(''),
   category: z.enum(['quick', 'food', 'recommendation', 'drink', 'dessert', 'other']),
-  food_sub_category: z.enum(['seafood', 'grill', 'fried', 'small_dish', 'rice']).optional().nullable(),
+  food_sub_category: z.enum(['seafood', 'salad', 'grill', 'fried', 'small_dish', 'rice']).optional().nullable(),
   drink_sub_category: z
     .enum([
       'beer',
@@ -27,6 +27,7 @@ const createSchema = z.object({
     .nullable(),
   price: z.number().int().min(0),
   is_all_you_can: z.boolean().optional().default(false),
+  is_recommended: z.boolean().optional().default(false),
   is_sold_out: z.boolean().optional().default(false),
   sort_order: z.number().int().optional().default(0)
 });
@@ -36,7 +37,7 @@ const updateSchema = z.object({
   name: z.string().min(1),
   name_kana: z.string().optional().default(''),
   category: z.enum(['quick', 'food', 'recommendation', 'drink', 'dessert', 'other']),
-  food_sub_category: z.enum(['seafood', 'grill', 'fried', 'small_dish', 'rice']).optional().nullable(),
+  food_sub_category: z.enum(['seafood', 'salad', 'grill', 'fried', 'small_dish', 'rice']).optional().nullable(),
   drink_sub_category: z
     .enum([
       'beer',
@@ -54,6 +55,7 @@ const updateSchema = z.object({
     .nullable(),
   price: z.number().int().min(0),
   is_all_you_can: z.boolean(),
+  is_recommended: z.boolean(),
   is_sold_out: z.boolean(),
   sort_order: z.number().int()
 });
@@ -91,6 +93,7 @@ export async function POST(req: NextRequest) {
       drinkSubCategory: parsed.data.category === 'drink' ? parsed.data.drink_sub_category ?? 'soft_drink' : null,
       price: parsed.data.price,
       isAllYouCan: parsed.data.is_all_you_can,
+      isRecommended: parsed.data.is_recommended,
       isSoldOut: parsed.data.is_sold_out,
       sortOrder: parsed.data.sort_order
     }
@@ -113,6 +116,7 @@ export async function PUT(req: NextRequest) {
       drinkSubCategory: parsed.data.category === 'drink' ? parsed.data.drink_sub_category ?? 'soft_drink' : null,
       price: parsed.data.price,
       isAllYouCan: parsed.data.is_all_you_can,
+      isRecommended: parsed.data.is_recommended,
       isSoldOut: parsed.data.is_sold_out,
       sortOrder: parsed.data.sort_order
     }

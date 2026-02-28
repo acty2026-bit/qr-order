@@ -13,6 +13,10 @@ async function main() {
     where: { createdAt: { lt: cutoff } }
   });
 
+  const deletedTableStates = await prisma.tableState.deleteMany({
+    where: { updatedAt: { lt: cutoff } }
+  });
+
   console.log(
     JSON.stringify(
       {
@@ -20,7 +24,8 @@ async function main() {
         cutoff: cutoff.toISOString(),
         deleted: {
           calls: deletedCalls.count,
-          orders: deletedOrders.count
+          orders: deletedOrders.count,
+          tableStates: deletedTableStates.count
         }
       },
       null,
