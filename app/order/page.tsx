@@ -447,6 +447,7 @@ export default function OrderPage() {
             fontWeight: 800,
             fontSize: productNameFontSize,
             lineHeight: productNameLineHeight,
+            color: '#26221d',
             wordBreak: 'break-word',
             minHeight: productNameMinHeight,
             display: '-webkit-box',
@@ -472,8 +473,8 @@ export default function OrderPage() {
           {menu.isAllYouCan && (
             <span
               style={{
-                fontSize: 10,
-                fontWeight: 800,
+                fontSize: 11,
+                fontWeight: 500,
                 lineHeight: 1,
                 color: '#7a5a00',
                 background: '#ffe266',
