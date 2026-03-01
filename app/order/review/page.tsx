@@ -270,15 +270,15 @@ export default function OrderReviewPage() {
       >
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={() => router.push(`/order?store=${encodeURIComponent(store)}&table=${tableNo}`)}>
           <div>🍴</div>
-          <div style={{ fontSize: 12 }}>メニュー</div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>メニュー</div>
         </button>
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={() => router.push(`/order/history?store=${encodeURIComponent(store)}&table=${tableNo}`)}>
           <div>🕘</div>
-          <div style={{ fontSize: 12 }}>履歴</div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>履歴</div>
         </button>
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={shareQr}>
           <div>▦</div>
-          <div style={{ fontSize: 12 }}>QR</div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>QR</div>
         </button>
       </nav>
 

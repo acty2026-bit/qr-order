@@ -406,7 +406,7 @@ export default function OrderPage() {
   const railButtonHeight = isCompactPhone ? 46 : 52;
 
   const imageSize = isCompactPhone ? 84 : 96;
-  const railFontSize = isCompactPhone ? 12 : 13;
+  const railFontSize = isCompactPhone ? 13 : 14;
   const productNameFontSize = isCompactPhone ? 15 : 17;
   const productNameLineHeight = 1.25;
   const productNameMinHeight = Math.round(productNameFontSize * productNameLineHeight * 2);
@@ -473,7 +473,7 @@ export default function OrderPage() {
           {menu.isAllYouCan && (
             <span
               style={{
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 500,
                 lineHeight: 1,
                 color: '#7a5a00',
@@ -685,7 +685,7 @@ export default function OrderPage() {
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                padding: '0 6px',
+                padding: '0 4px',
                 borderLeft: `4px solid ${railColor[key]}`,
                 background: activeRail === key ? '#fdf0dd' : '#fff',
                 color: activeRail === key ? '#7a4a12' : '#6d665c',
@@ -781,7 +781,7 @@ export default function OrderPage() {
           background: '#f59b2e',
           color: '#fff',
           border: '3px solid #fff',
-          boxShadow: '0 8px 18px rgba(0,0,0,0.2)',
+          boxShadow: '0 10px 24px rgba(0,0,0,0.32)',
           display: 'grid',
           placeItems: 'center',
           fontWeight: 800
@@ -847,15 +847,15 @@ export default function OrderPage() {
       >
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={() => setActiveRail('recommendation')}>
           <div>🍴</div>
-          <div style={{ fontSize: 12 }}>メニュー</div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>メニュー</div>
         </button>
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={goToHistory}>
           <div>🕘</div>
-          <div style={{ fontSize: 12 }}>履歴</div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>履歴</div>
         </button>
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={shareQr}>
           <div>▦</div>
-          <div style={{ fontSize: 12 }}>QR</div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>QR</div>
         </button>
       </nav>
 
@@ -912,10 +912,11 @@ export default function OrderPage() {
                   position: 'absolute',
                   right: 12,
                   top: 12,
-                  width: 52,
-                  height: 52,
-                  borderRadius: 26,
-                  background: '#fff'
+                  width: 60,
+                  height: 60,
+                  borderRadius: 30,
+                  background: '#fff',
+                  fontSize: 28
                 }}
                 aria-label="閉じる"
               >
@@ -948,20 +949,28 @@ export default function OrderPage() {
               <div
                 style={{
                   display: 'inline-grid',
-                  gridTemplateColumns: '42px 42px 42px',
+                  gridTemplateColumns: '48px 48px 48px',
                   alignItems: 'center',
                   textAlign: 'center',
                   borderRadius: 30,
                   background: '#f6f5f3',
                   border: '1px solid #d9d4c8',
-                  height: 48
+                  height: 54
                 }}
               >
-                <button className="btn-ghost" style={{ border: 0, background: 'transparent', borderRadius: 30 }} onClick={() => setModalQty((v) => Math.max(1, v - 1))}>
+                <button
+                  className="btn-ghost"
+                  style={{ border: 0, background: 'transparent', borderRadius: 30, fontSize: 24 }}
+                  onClick={() => setModalQty((v) => Math.max(1, v - 1))}
+                >
                   －
                 </button>
                 <div style={{ fontSize: 22, fontWeight: 700 }}>{modalQty}</div>
-                <button className="btn-ghost" style={{ border: 0, background: 'transparent', borderRadius: 30 }} onClick={() => setModalQty((v) => Math.min(99, v + 1))}>
+                <button
+                  className="btn-ghost"
+                  style={{ border: 0, background: 'transparent', borderRadius: 30, fontSize: 24 }}
+                  onClick={() => setModalQty((v) => Math.min(99, v + 1))}
+                >
                   ＋
                 </button>
               </div>
