@@ -102,7 +102,7 @@ export default function OrderHistoryPage() {
           boxShadow: '0 8px 14px -12px rgba(0, 0, 0, 0.45)'
         }}
       >
-        <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 2 }}>注文履歴</div>
+        <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 2 }}>注文履歴</div>
         <div style={{ position: 'absolute', left: 2, top: 8, fontSize: 12, color: '#7a7469', fontWeight: 700 }}>
           {store || '-'} / T{tableNo || '-'}
         </div>

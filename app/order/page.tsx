@@ -24,6 +24,7 @@ type Menu = {
   isAllYouCan: boolean;
   isRecommended: boolean;
   isSoldOut: boolean;
+  imageUrl?: string | null;
 };
 
 type Cart = Record<string, { menu: Menu; qty: number }>;
@@ -40,8 +41,7 @@ type RailKey =
   | 'small_dish'
   | 'rice'
   | 'other'
-  | 'dessert'
-  ;
+  | 'dessert';
 
 const labelMap: Record<RailKey, string> = {
   recommendation: 'おすすめ',
@@ -77,7 +77,7 @@ const icons: Record<Menu['category'], string> = {
   food: '🍽️',
   recommendation: '⭐',
   drink: '🍺',
-  dessert: '🥗',
+  dessert: '🍰',
   other: '🍴',
   quick: '🍽️'
 };
@@ -100,6 +100,9 @@ export default function OrderPage() {
   const [activeAlcoholSub, setActiveAlcoholSub] = useState<
     'all' | 'beer' | 'highball' | 'sour' | 'cocktail' | 'shochu' | 'sake' | 'wine'
   >('all');
+  const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
+  const [modalQty, setModalQty] = useState(1);
+
   const prevPlanTabRef = useRef<'all' | 'houdai'>('all');
   const [viewportHeight, setViewportHeight] = useState(800);
   const [viewportWidth, setViewportWidth] = useState(390);
@@ -108,6 +111,7 @@ export default function OrderPage() {
   const headerRef = useRef<HTMLDivElement | null>(null);
   const searchWrapRef = useRef<HTMLDivElement | null>(null);
   const planWrapRef = useRef<HTMLDivElement | null>(null);
+
   const hasAllYouCanMenus = menus.some((menu) => menu.isAllYouCan);
 
   useEffect(() => {
@@ -188,11 +192,12 @@ export default function OrderPage() {
       .catch(() => setRepeatMenuIds([]));
   }, [store, tableNo]);
 
-  const normalizedSearch = searchTerm.trim().toLowerCase();
   const showToast = (text: string) => {
     setToast(text);
     window.setTimeout(() => setToast(''), 2000);
   };
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
   const isMatch = (menu: Menu) => {
     if (!normalizedSearch) return true;
     return menu.name.toLowerCase().includes(normalizedSearch);
@@ -207,15 +212,12 @@ export default function OrderPage() {
     () => filteredByPlanAndSearch.filter((menu) => menu.isRecommended),
     [filteredByPlanAndSearch]
   );
+
   const repeatMenus = useMemo(
     () =>
       filteredByPlanAndSearch
         .filter((menu) => repeatMenuIds.includes(menu.id))
-        .sort((a, b) => {
-          const ai = repeatMenuIds.indexOf(a.id);
-          const bi = repeatMenuIds.indexOf(b.id);
-          return ai - bi;
-        }),
+        .sort((a, b) => repeatMenuIds.indexOf(a.id) - repeatMenuIds.indexOf(b.id)),
     [filteredByPlanAndSearch, repeatMenuIds]
   );
 
@@ -232,10 +234,7 @@ export default function OrderPage() {
       return alcoholRows.filter((m) => drinkSub(m) === activeAlcoholSub);
     }
     if (activeRail === 'drink') {
-      return drinkRows.filter((m) => {
-        const sub = drinkSub(m);
-        return sub === 'soft_drink' || sub === 'non_alcohol';
-      });
+      return drinkRows.filter((m) => ['soft_drink', 'non_alcohol'].includes(drinkSub(m)));
     }
     if (activeRail === 'seafood') {
       return filteredByPlanAndSearch.filter(
@@ -262,7 +261,6 @@ export default function OrderPage() {
   const subtotal = Object.values(cart).reduce((sum, item) => sum + item.menu.price * item.qty, 0);
   const totalQty = Object.values(cart).reduce((sum, item) => sum + item.qty, 0);
   const formatPrice = (value: number) => value.toLocaleString('ja-JP');
-  const taxIncluded = (value: number) => Math.round(value * (1 + taxRate / 100));
 
   const changeQty = (menuId: string, qty: number, menu?: Menu) => {
     setCart((prev) => {
@@ -280,15 +278,32 @@ export default function OrderPage() {
 
   const getQty = (menuId: string) => cart[menuId]?.qty ?? 0;
 
+  const openMenuModal = (menu: Menu) => {
+    if (menu.isSoldOut) return;
+    setSelectedMenu(menu);
+    setModalQty(1);
+  };
+
+  const closeMenuModal = () => {
+    setSelectedMenu(null);
+    setModalQty(1);
+  };
+
+  const addFromModal = () => {
+    if (!selectedMenu) return;
+    const current = getQty(selectedMenu.id);
+    changeQty(selectedMenu.id, current + modalQty, selectedMenu);
+    showToast('注文リストへ追加しました');
+    closeMenuModal();
+  };
+
   const callStaff = async () => {
     const res = await fetch('/api/call/create', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ store_key: store, table_no: tableNo })
     });
-    if (res.ok) {
-      showToast('店員を呼び出しました');
-    }
+    if (res.ok) showToast('店員を呼び出しました');
   };
 
   const goToReview = () => {
@@ -392,101 +407,110 @@ export default function OrderPage() {
 
   const imageSize = isCompactPhone ? 84 : 96;
   const railFontSize = isCompactPhone ? 12 : 13;
-  const qtyButtonSize = isCompactPhone ? 28 : 30;
+  const productNameFontSize = isCompactPhone ? 15 : 17;
+  const productNameLineHeight = 1.25;
+  const productNameMinHeight = Math.round(productNameFontSize * productNameLineHeight * 2);
 
   const renderMenuCard = (menu: Menu) => (
-    <div
+    <button
       key={menu.id}
       className="card"
+      onClick={() => openMenuModal(menu)}
+      disabled={menu.isSoldOut}
       style={{
         display: 'grid',
         gridTemplateColumns: `1fr ${imageSize}px`,
         gap: 8,
-        padding: 10,
+        padding: 0,
         borderRadius: 12,
         border: '1px solid #e7e1d8',
         opacity: menu.isSoldOut ? 0.55 : 1,
         background: '#fff',
-        minWidth: 0
+        minWidth: 0,
+        textAlign: 'left',
+        overflow: 'hidden',
+        minHeight: imageSize
       }}
     >
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: isCompactPhone ? 16 : 18, lineHeight: 1.25, wordBreak: 'break-word' }}>{menu.name}</div>
-        <div style={{ marginTop: 4, color: '#666', fontWeight: 700 }}>￥{formatPrice(menu.price)}</div>
-        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', minWidth: 0 }}>
-          <div
-            style={{
-              display: 'inline-grid',
-              gridTemplateColumns: `${qtyButtonSize}px ${qtyButtonSize}px ${qtyButtonSize}px`,
-              borderRadius: 10,
-              background: '#f2eee6',
-              textAlign: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <button
-              className="btn-ghost"
-              style={{ border: 0, background: 'transparent' }}
-              onClick={() => changeQty(menu.id, getQty(menu.id) - 1, menu)}
-              disabled={menu.isSoldOut}
+      <div
+        style={{
+          minWidth: 0,
+          padding: 10,
+          minHeight: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 800,
+            fontSize: productNameFontSize,
+            lineHeight: productNameLineHeight,
+            wordBreak: 'break-word',
+            minHeight: productNameMinHeight,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}
+        >
+          {menu.name}
+        </div>
+        <div
+          style={{
+            marginTop: 6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8
+          }}
+        >
+          <span style={{ color: '#666', fontWeight: 700, fontSize: isCompactPhone ? 16 : 18 }}>
+            ￥{formatPrice(menu.price)}
+          </span>
+          {menu.isAllYouCan && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                lineHeight: 1,
+                color: '#7a5a00',
+                background: '#ffe266',
+                borderRadius: 6,
+                padding: '4px 6px',
+                border: '1px solid #f2cf3f',
+                flexShrink: 0
+              }}
             >
-              -
-            </button>
-            <div style={{ fontWeight: 800 }}>{getQty(menu.id)}</div>
-            <button
-              className="btn-ghost"
-              style={{ border: 0, background: 'transparent' }}
-              onClick={() => changeQty(menu.id, getQty(menu.id) + 1, menu)}
-              disabled={menu.isSoldOut}
-            >
-              +
-            </button>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {menu.isAllYouCan && (
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: '#996700',
-                  background: '#fff0c7',
-                  borderRadius: 6,
-                  padding: '1px 6px',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  lineHeight: 1.1,
-                  minWidth: 34,
-                  justifyContent: 'center'
-                }}
-              >
-                放題
-              </span>
-            )}
-            {menu.isSoldOut && (
-              <span
-                style={{ fontSize: 12, fontWeight: 700, color: '#8a3a3a', background: '#ffe7e7', borderRadius: 6, padding: '1px 6px' }}
-              >
-                売切
-              </span>
-            )}
-          </div>
+              放題
+            </span>
+          )}
         </div>
       </div>
       <div
         style={{
           width: imageSize,
-          height: imageSize,
-          borderRadius: 10,
+          height: '100%',
+          minHeight: imageSize,
           background: 'linear-gradient(145deg, #f4f0e9, #ffffff)',
           display: 'grid',
           placeItems: 'center',
-          fontSize: isCompactPhone ? 42 : 48
+          overflow: 'hidden',
+          alignSelf: 'stretch'
         }}
       >
-        {icons[menu.category]}
+        {menu.imageUrl ? (
+          <img
+            src={menu.imageUrl}
+            alt={menu.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <span style={{ fontSize: isCompactPhone ? 42 : 48 }}>{icons[menu.category]}</span>
+        )}
       </div>
-    </div>
+    </button>
   );
 
   return (
@@ -513,7 +537,7 @@ export default function OrderPage() {
           boxShadow: '0 8px 14px -12px rgba(0, 0, 0, 0.45)'
         }}
       >
-        <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 2 }}>メニュー</div>
+        <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 2 }}>メニュー</div>
         <div style={{ position: 'absolute', left: 2, top: 8, fontSize: 12, color: '#7a7469', fontWeight: 700 }}>
           {store || '-'} / T{tableNo || '-'}
         </div>
@@ -707,11 +731,13 @@ export default function OrderPage() {
               ))}
             </div>
           )}
+
           {listMenus.length === 0 && (
             <div className="card" style={{ padding: 16, color: '#767068' }}>
               表示できる商品がありません
             </div>
           )}
+
           {listMenus.map((menu) => renderMenuCard(menu))}
         </section>
       </div>
@@ -794,6 +820,137 @@ export default function OrderPage() {
         </button>
       </nav>
 
+      {selectedMenu && (
+        <div
+          onClick={closeMenuModal}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            zIndex: 60,
+            display: 'grid',
+            placeItems: 'center',
+            padding: 10
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 430,
+              background: '#fff',
+              borderRadius: 14,
+              overflow: 'hidden',
+              border: '1px solid #d9d2c4',
+              boxShadow: '0 14px 30px rgba(0,0,0,0.28)',
+              position: 'relative'
+            }}
+          >
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '1 / 1',
+                background: 'linear-gradient(145deg, #f4f0e9, #ffffff)',
+                display: 'grid',
+                placeItems: 'center',
+                overflow: 'hidden'
+              }}
+            >
+              {selectedMenu.imageUrl ? (
+                <img
+                  src={selectedMenu.imageUrl}
+                  alt={selectedMenu.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span style={{ fontSize: 180 }}>{icons[selectedMenu.category]}</span>
+              )}
+              <button
+                className="btn-ghost"
+                onClick={closeMenuModal}
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: 12,
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  background: '#fff'
+                }}
+                aria-label="閉じる"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '24px 14px 96px' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.35 }}>{selectedMenu.name}</div>
+              <div style={{ marginTop: 8, fontSize: 16, fontWeight: 700, color: '#5f5a52' }}>
+                ￥{formatPrice(selectedMenu.price)}
+              </div>
+            </div>
+
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: '#fff',
+                borderTop: '1px solid #ddd6c9',
+                padding: 12,
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr',
+                gap: 10,
+                alignItems: 'center'
+              }}
+            >
+              <div
+                style={{
+                  display: 'inline-grid',
+                  gridTemplateColumns: '42px 42px 42px',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  borderRadius: 30,
+                  background: '#f6f5f3',
+                  border: '1px solid #d9d4c8',
+                  height: 48
+                }}
+              >
+                <button className="btn-ghost" style={{ border: 0, background: 'transparent', borderRadius: 30 }} onClick={() => setModalQty((v) => Math.max(1, v - 1))}>
+                  －
+                </button>
+                <div style={{ fontSize: 22, fontWeight: 700 }}>{modalQty}</div>
+                <button className="btn-ghost" style={{ border: 0, background: 'transparent', borderRadius: 30 }} onClick={() => setModalQty((v) => Math.min(99, v + 1))}>
+                  ＋
+                </button>
+              </div>
+
+              <button
+                className="btn-primary soft-blink"
+                onClick={addFromModal}
+                style={{
+                  height: 48,
+                  borderRadius: 12,
+                  background: '#f08d17',
+                  borderColor: '#f08d17',
+                  color: '#fff',
+                  fontSize: 20,
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 16px'
+                }}
+              >
+                注文リストへ追加
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div
           style={{
@@ -801,7 +958,7 @@ export default function OrderPage() {
             left: '50%',
             top: '46%',
             transform: 'translate(-50%, -50%)',
-            zIndex: 50,
+            zIndex: 70,
             background: '#fff',
             color: '#222',
             padding: '12px 18px',
@@ -816,7 +973,6 @@ export default function OrderPage() {
         </div>
       )}
 
-      <div style={{ display: 'none' }}>￥{formatPrice(taxIncluded(subtotal))}</div>
       {message && <p style={{ marginTop: 8 }}>{message}</p>}
     </main>
   );
