@@ -392,6 +392,7 @@ export default function OrderPage() {
 
   const imageSize = isCompactPhone ? 84 : 96;
   const railFontSize = isCompactPhone ? 12 : 13;
+  const qtyButtonSize = isCompactPhone ? 28 : 30;
 
   const renderMenuCard = (menu: Menu) => (
     <div
@@ -412,11 +413,11 @@ export default function OrderPage() {
       <div style={{ minWidth: 0 }}>
         <div style={{ fontWeight: 800, fontSize: isCompactPhone ? 16 : 18, lineHeight: 1.25, wordBreak: 'break-word' }}>{menu.name}</div>
         <div style={{ marginTop: 4, color: '#666', fontWeight: 700 }}>￥{formatPrice(menu.price)}</div>
-        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', minWidth: 0 }}>
           <div
             style={{
               display: 'inline-grid',
-              gridTemplateColumns: '30px 30px 30px',
+              gridTemplateColumns: `${qtyButtonSize}px ${qtyButtonSize}px ${qtyButtonSize}px`,
               borderRadius: 10,
               background: '#f2eee6',
               textAlign: 'center',
@@ -441,31 +442,35 @@ export default function OrderPage() {
               +
             </button>
           </div>
-          {menu.isAllYouCan && (
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#996700',
-                background: '#fff0c7',
-                borderRadius: 6,
-                padding: '1px 6px',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
-                alignItems: 'center',
-                lineHeight: 1.1,
-                minWidth: 34,
-                justifyContent: 'center'
-              }}
-            >
-              放題
-            </span>
-          )}
-          {menu.isSoldOut && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#8a3a3a', background: '#ffe7e7', borderRadius: 6, padding: '1px 6px' }}>
-              売切
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {menu.isAllYouCan && (
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#996700',
+                  background: '#fff0c7',
+                  borderRadius: 6,
+                  padding: '1px 6px',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  lineHeight: 1.1,
+                  minWidth: 34,
+                  justifyContent: 'center'
+                }}
+              >
+                放題
+              </span>
+            )}
+            {menu.isSoldOut && (
+              <span
+                style={{ fontSize: 12, fontWeight: 700, color: '#8a3a3a', background: '#ffe7e7', borderRadius: 6, padding: '1px 6px' }}
+              >
+                売切
+              </span>
+            )}
+          </div>
         </div>
       </div>
       <div
