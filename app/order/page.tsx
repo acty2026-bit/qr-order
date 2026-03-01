@@ -442,7 +442,22 @@ export default function OrderPage() {
             </button>
           </div>
           {menu.isAllYouCan && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#996700', background: '#fff0c7', borderRadius: 6, padding: '1px 6px' }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#996700',
+                background: '#fff0c7',
+                borderRadius: 6,
+                padding: '1px 6px',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                lineHeight: 1.1,
+                minWidth: 34,
+                justifyContent: 'center'
+              }}
+            >
               放題
             </span>
           )}
