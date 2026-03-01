@@ -447,7 +447,7 @@ export default function OrderPage() {
             fontWeight: 800,
             fontSize: productNameFontSize,
             lineHeight: productNameLineHeight,
-            color: '#26221d',
+            color: '#666',
             wordBreak: 'break-word',
             minHeight: productNameMinHeight,
             display: '-webkit-box',
@@ -473,7 +473,7 @@ export default function OrderPage() {
           {menu.isAllYouCan && (
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 500,
                 lineHeight: 1,
                 color: '#7a5a00',
@@ -498,7 +498,8 @@ export default function OrderPage() {
           display: 'grid',
           placeItems: 'center',
           overflow: 'hidden',
-          alignSelf: 'stretch'
+          alignSelf: 'stretch',
+          position: 'relative'
         }}
       >
         {menu.imageUrl ? (
@@ -509,6 +510,30 @@ export default function OrderPage() {
           />
         ) : (
           <span style={{ fontSize: isCompactPhone ? 42 : 48 }}>{icons[menu.category]}</span>
+        )}
+        {getQty(menu.id) > 0 && (
+          <span
+            className="soft-blink"
+            style={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              minWidth: 24,
+              height: 24,
+              borderRadius: 12,
+              background: '#f08d17',
+              color: '#fff',
+              border: '2px solid #fff',
+              fontSize: 13,
+              fontWeight: 700,
+              display: 'grid',
+              placeItems: 'center',
+              padding: '0 6px',
+              lineHeight: 1
+            }}
+          >
+            {getQty(menu.id)}
+          </span>
         )}
       </div>
     </button>
@@ -750,9 +775,9 @@ export default function OrderPage() {
           position: 'fixed',
           right: 'max(12px, calc((100vw - 430px) / 2 + 12px))',
           bottom: 78,
-          width: 72,
-          height: 72,
-          borderRadius: 36,
+          width: 82,
+          height: 82,
+          borderRadius: 41,
           background: '#f59b2e',
           color: '#fff',
           border: '3px solid #fff',
@@ -763,11 +788,24 @@ export default function OrderPage() {
         }}
       >
         <div style={{ textAlign: 'center', lineHeight: 1.1 }}>
-          <div style={{ fontSize: 20 }}>🛒</div>
-          <div style={{ fontSize: 11 }}>注文へ進む</div>
+          <div style={{ display: 'grid', placeItems: 'center', marginBottom: 2 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M3 4H5L7.2 14.2C7.3 14.7 7.8 15 8.3 15H17.1C17.6 15 18.1 14.7 18.2 14.2L20 8H6"
+                stroke="#fff"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="9.2" cy="19" r="1.6" fill="#fff" />
+              <circle cx="17" cy="19" r="1.6" fill="#fff" />
+            </svg>
+          </div>
+          <div style={{ fontSize: 13 }}>注文へ</div>
         </div>
         {totalQty > 0 && (
           <span
+            className="soft-blink"
             style={{
               position: 'absolute',
               top: 3,
