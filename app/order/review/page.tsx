@@ -132,7 +132,9 @@ export default function OrderReviewPage() {
         padding: '8px 10px 76px',
         background: '#f6f5f3',
         minHeight: '100dvh',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
+        touchAction: 'pan-y'
       }}
     >
       <div

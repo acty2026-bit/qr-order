@@ -111,7 +111,6 @@ export default function OrderPage() {
   const hasAllYouCanMenus = menus.some((menu) => menu.isAllYouCan);
 
   useEffect(() => {
-    if (planTab !== 'houdai') return;
     const updateViewport = () => {
       setViewportHeight(window.innerHeight);
       setViewportWidth(window.innerWidth);
@@ -406,13 +405,14 @@ export default function OrderPage() {
         borderRadius: 12,
         border: '1px solid #e7e1d8',
         opacity: menu.isSoldOut ? 0.55 : 1,
-        background: '#fff'
+        background: '#fff',
+        minWidth: 0
       }}
     >
-      <div>
-        <div style={{ fontWeight: 800, fontSize: isCompactPhone ? 16 : 18, lineHeight: 1.25 }}>{menu.name}</div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 800, fontSize: isCompactPhone ? 16 : 18, lineHeight: 1.25, wordBreak: 'break-word' }}>{menu.name}</div>
         <div style={{ marginTop: 4, color: '#666', fontWeight: 700 }}>￥{formatPrice(menu.price)}</div>
-        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <div
             style={{
               display: 'inline-grid',
@@ -493,7 +493,9 @@ export default function OrderPage() {
         padding: '8px 10px 66px',
         background: '#f6f5f3',
         minHeight: '100dvh',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
+        touchAction: 'pan-y'
       }}
     >
       <div
@@ -598,7 +600,8 @@ export default function OrderPage() {
         style={{
           display: 'grid',
           gridTemplateColumns: `${railWidth}px 1fr`,
-          gap: 8
+          gap: 8,
+          minWidth: 0
         }}
       >
         <aside
@@ -609,6 +612,8 @@ export default function OrderPage() {
             alignContent: 'start',
             maxHeight: `${scrollPaneHeight}px`,
             overflowY: 'auto',
+            overscrollBehaviorY: 'contain',
+            overscrollBehaviorX: 'none',
             paddingRight: 2
           }}
         >
@@ -643,8 +648,12 @@ export default function OrderPage() {
             display: 'grid',
             gap: 8,
             alignContent: 'start',
+            minWidth: 0,
             maxHeight: `${scrollPaneHeight}px`,
             overflowY: 'auto',
+            overflowX: 'hidden',
+            overscrollBehaviorY: 'contain',
+            overscrollBehaviorX: 'none',
             paddingRight: 2
           }}
         >

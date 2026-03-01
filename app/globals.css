@@ -19,6 +19,9 @@ body {
   background: radial-gradient(circle at top right, #efe9d7, var(--bg));
   color: var(--text);
   font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
 }
 
 a {
