@@ -617,9 +617,7 @@ export default function OrderPage() {
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             marginBottom: 8,
-            border: '1px solid #e5dfd4',
-            borderRadius: 5,
-            overflow: 'hidden'
+            borderBottom: '1px solid #e5dfd4'
           }}
         >
           <button
@@ -631,7 +629,9 @@ export default function OrderPage() {
               fontSize: 20,
               fontWeight: planTab === 'all' ? 800 : 500,
               color: planTab === 'all' ? '#d26a00' : '#2a2824',
-              borderBottom: planTab === 'all' ? '4px solid #d26a00' : '4px solid transparent'
+              borderBottom: planTab === 'all' ? '4px solid #d26a00' : '4px solid transparent',
+              borderBottomLeftRadius: 2,
+              borderBottomRightRadius: 2
             }}
           >
             全て
@@ -645,7 +645,9 @@ export default function OrderPage() {
               fontSize: 20,
               fontWeight: planTab === 'houdai' ? 800 : 500,
               color: planTab === 'houdai' ? '#d26a00' : '#2a2824',
-              borderBottom: planTab === 'houdai' ? '4px solid #d26a00' : '4px solid transparent'
+              borderBottom: planTab === 'houdai' ? '4px solid #d26a00' : '4px solid transparent',
+              borderBottomLeftRadius: 2,
+              borderBottomRightRadius: 2
             }}
           >
             放題
