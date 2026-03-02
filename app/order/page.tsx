@@ -422,7 +422,7 @@ export default function OrderPage() {
         gridTemplateColumns: `1fr ${imageSize}px`,
         gap: 8,
         padding: 0,
-        borderRadius: 12,
+        borderRadius: 5,
         border: '1px solid #e7e1d8',
         opacity: menu.isSoldOut ? 0.55 : 1,
         background: '#fff',
@@ -478,7 +478,7 @@ export default function OrderPage() {
                 lineHeight: 1,
                 color: '#7a5a00',
                 background: '#ffe266',
-                borderRadius: 6,
+                borderRadius: 5,
                 padding: '4px 6px',
                 border: '1px solid #f2cf3f',
                 flexShrink: 0
@@ -520,7 +520,7 @@ export default function OrderPage() {
               right: 4,
               minWidth: 24,
               height: 24,
-              borderRadius: 12,
+              borderRadius: 5,
               background: '#f08d17',
               color: '#fff',
               border: '2px solid #fff',
@@ -570,7 +570,7 @@ export default function OrderPage() {
         <div style={{ position: 'absolute', right: 2, top: 8, display: 'flex', gap: 6 }}>
           <button
             className="btn-ghost"
-            style={{ width: 42, height: 42, borderRadius: 10, fontSize: 20, padding: 0 }}
+            style={{ width: 42, height: 42, borderRadius: 5, fontSize: 20, padding: 0 }}
             onClick={() => {
               setIsSearchOpen((prev) => !prev);
               window.setTimeout(() => searchInputRef.current?.focus(), 0);
@@ -584,7 +584,7 @@ export default function OrderPage() {
             style={{
               width: 42,
               height: 42,
-              borderRadius: 10,
+              borderRadius: 5,
               fontSize: 20,
               padding: 0,
               background: '#f59b2e',
@@ -680,7 +680,7 @@ export default function OrderPage() {
               style={{
                 justifyContent: 'flex-start',
                 fontSize: railFontSize,
-                borderRadius: 10,
+                borderRadius: 5,
                 height: railButtonHeight,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -740,7 +740,7 @@ export default function OrderPage() {
                   style={{
                     width: '100%',
                     height: 34,
-                    borderRadius: 10,
+                    borderRadius: 5,
                     fontSize: isCompactPhone ? 10 : 11,
                     padding: 0,
                     whiteSpace: 'nowrap',
@@ -878,7 +878,7 @@ export default function OrderPage() {
               width: '100%',
               maxWidth: 430,
               background: '#fff',
-              borderRadius: 14,
+              borderRadius: 5,
               overflow: 'hidden',
               border: '1px solid #d9d2c4',
               boxShadow: '0 14px 30px rgba(0,0,0,0.28)',
@@ -980,7 +980,7 @@ export default function OrderPage() {
                 onClick={addFromModal}
                 style={{
                   height: 48,
-                  borderRadius: 12,
+                  borderRadius: 5,
                   background: '#f08d17',
                   borderColor: '#f08d17',
                   color: '#fff',
@@ -1010,7 +1010,7 @@ export default function OrderPage() {
             background: '#fff',
             color: '#222',
             padding: '12px 18px',
-            borderRadius: 12,
+            borderRadius: 5,
             border: '1px solid #e4ddd1',
             boxShadow: '0 10px 22px rgba(0, 0, 0, 0.16)',
             fontWeight: 700,

@@ -338,7 +338,6 @@ export default function AdminMenuPage() {
   };
 
   const controlStyle = { height: 42 };
-  const categoryFilterButtonStyle = { width: '100%', height: 40, padding: '0 8px' };
   const baseColumns = '2fr 1.4fr 1fr 1.6fr';
   const priceWrapStyle = { position: 'relative' as const, height: 42 };
   const priceInputStyle = { ...controlStyle, paddingRight: 28 };
@@ -350,6 +349,18 @@ export default function AdminMenuPage() {
     color: '#666',
     pointerEvents: 'none' as const
   };
+  const filterItems: Array<{ key: typeof menuFilter; label: string; color: string }> = [
+    { key: 'alcohol', label: 'アルコール', color: '#5a9ce6' },
+    { key: 'soft_drink', label: 'ソフトドリンク', color: '#59b6ff' },
+    { key: 'seafood', label: '海鮮', color: '#5bc0de' },
+    { key: 'salad', label: 'サラダ', color: '#8ad36d' },
+    { key: 'grill', label: '焼き物', color: '#f3a84b' },
+    { key: 'fried', label: '揚げ物', color: '#f2cb4d' },
+    { key: 'small_dish', label: '一品料理', color: '#8dcf50' },
+    { key: 'rice', label: 'ご飯物', color: '#8b9ee8' },
+    { key: 'dessert', label: 'デザート', color: '#f8a2c7' },
+    { key: 'other', label: 'その他', color: '#b3b3b3' }
+  ];
 
   return (
     <main>
@@ -364,7 +375,7 @@ export default function AdminMenuPage() {
             background: '#fff',
             color: '#1f1f1b',
             padding: '10px 16px',
-            borderRadius: 12,
+            borderRadius: 5,
             fontWeight: 700,
             border: '1px solid #ddd6c9',
             boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
@@ -486,87 +497,33 @@ export default function AdminMenuPage() {
               {savingAll ? '保存中...' : '変更を保存'}
             </button>
           </div>
+        </div>
+
+        <div
+          style={{
+            position: 'sticky',
+            top: 98,
+            zIndex: 7,
+            background: '#f3f3f3',
+            border: '1px solid #dedede',
+            borderRadius: 5,
+            display: 'grid',
+            gridTemplateColumns: '124px 1fr',
+            alignItems: 'stretch',
+            marginBottom: 4
+          }}
+        >
           <div
             style={{
+              color: '#5f5f5f',
+              fontWeight: 700,
+              fontSize: 15,
               display: 'grid',
-              gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-              columnGap: 8,
-              rowGap: 8,
-              marginBottom: 25
+              placeItems: 'center'
             }}
           >
-            <button
-              className={menuFilter === 'alcohol' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('alcohol')}
-            >
-              アルコール
-            </button>
-            <button
-              className={menuFilter === 'soft_drink' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('soft_drink')}
-            >
-              ソフトドリンク
-            </button>
-            <button
-              className={menuFilter === 'seafood' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('seafood')}
-            >
-              海鮮
-            </button>
-            <button
-              className={menuFilter === 'salad' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('salad')}
-            >
-              サラダ
-            </button>
-            <button
-              className={menuFilter === 'grill' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('grill')}
-            >
-              焼き物
-            </button>
-            <button
-              className={menuFilter === 'fried' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('fried')}
-            >
-              揚げ物
-            </button>
-            <button
-              className={menuFilter === 'small_dish' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('small_dish')}
-            >
-              一品料理
-            </button>
-            <button
-              className={menuFilter === 'rice' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('rice')}
-            >
-              ご飯物
-            </button>
-            <button
-              className={menuFilter === 'dessert' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('dessert')}
-            >
-              デザート
-            </button>
-            <button
-              className={menuFilter === 'other' ? 'btn-primary' : 'btn-ghost'}
-              style={categoryFilterButtonStyle}
-              onClick={() => setMenuFilter('other')}
-            >
-              その他
-            </button>
+            カテゴリー
           </div>
-
           <div
             style={{
               display: 'grid',
@@ -575,11 +532,9 @@ export default function AdminMenuPage() {
               rowGap: 8,
               width: '100%',
               fontSize: 15,
-              color: '#6d665c',
-              marginBottom: 4,
+              color: '#5f5f5f',
               fontWeight: 700,
-              paddingBottom: 8,
-              borderBottom: '1px solid #ddd6c9'
+              padding: '10px 8px'
             }}
           >
             <div style={{ textAlign: 'center' }}>並替え</div>
@@ -594,124 +549,169 @@ export default function AdminMenuPage() {
           </div>
         </div>
 
-        {filteredMenus.map((menu) => (
-          <div
-            key={menu.id}
-            draggable
-            onDragStart={() => setDraggingMenuId(menu.id)}
-            onDragEnd={() => setDraggingMenuId(null)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              void moveMenu(menu.id, filteredIds);
-              setDraggingMenuId(null);
-            }}
+        <div style={{ display: 'grid', gridTemplateColumns: '124px 1fr', gap: 0, alignItems: 'start' }}>
+          <aside
+            className="hide-scrollbar"
             style={{
-              borderBottom: '1px solid #eee',
-              padding: '4px 0',
-              cursor: 'grab',
-              opacity: draggingMenuId === menu.id ? 0.55 : 1,
-              background: draggingMenuId === menu.id ? '#f7f3e7' : 'transparent'
+              position: 'sticky',
+              top: 152,
+              display: 'grid',
+              gap: 8,
+              alignContent: 'start'
             }}
           >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: `48px ${baseColumns} 0.8fr 0.8fr 0.8fr 0.9fr`,
-                columnGap: 10,
-                rowGap: 8,
-                width: '100%'
-              }}
-            >
-              <div style={{ display: 'grid', placeItems: 'center', height: 42, fontSize: 22, color: '#8d877b' }}>☰</div>
-              <input
-                style={controlStyle}
-                value={menu.name}
-                onChange={(e) => setMenuById(menu.id, (m) => ({ ...m, name: e.target.value }))}
-              />
-              <input
-                style={controlStyle}
-                value={menu.nameKana}
-                onChange={(e) => setMenuById(menu.id, (m) => ({ ...m, nameKana: e.target.value }))}
-              />
-              <div style={priceWrapStyle}>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="金額"
-                  style={priceInputStyle}
-                  value={formatDigits(menu.price)}
-                  onChange={(e) => setMenuById(menu.id, (m) => ({ ...m, price: toInt(e.target.value) }))}
-                />
-                <span style={yenStyle}>円</span>
-              </div>
-              <select
-                style={controlStyle}
-                value={menuToCategoryChoice(menu)}
-                onChange={(e) => {
-                  const parsed = parseCategoryChoice(e.target.value as CategoryChoice);
-                  setMenuById(menu.id, (m) => ({
-                    ...m,
-                    category: parsed.category,
-                    foodSubCategory: parsed.food_sub_category,
-                    drinkSubCategory: parsed.drink_sub_category
-                  }));
+            {filterItems.map((item) => (
+              <button
+                key={item.key}
+                className="btn-ghost"
+                style={{
+                  width: '100%',
+                  height: 42,
+                  padding: '0 8px',
+                  justifyContent: 'flex-start',
+                  borderRadius: 5,
+                  borderRight: 0,
+                  borderLeft: `4px solid ${item.color}`,
+                  background: menuFilter === item.key ? '#fdf0dd' : '#fff',
+                  color: menuFilter === item.key ? '#7a4a12' : '#6d665c',
+                  fontWeight: menuFilter === item.key ? 700 : 500,
+                  fontSize: 14,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+                onClick={() => setMenuFilter(item.key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </aside>
+
+          <div
+            style={{
+              borderLeft: '1px solid #dedede'
+            }}
+          >
+            {filteredMenus.map((menu) => (
+              <div
+                key={menu.id}
+                draggable
+                onDragStart={() => setDraggingMenuId(menu.id)}
+                onDragEnd={() => setDraggingMenuId(null)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  void moveMenu(menu.id, filteredIds);
+                  setDraggingMenuId(null);
+                }}
+                style={{
+                  borderBottom: '1px solid #eee',
+                  padding: '4px 0',
+                  cursor: 'grab',
+                  opacity: draggingMenuId === menu.id ? 0.55 : 1,
+                  background: draggingMenuId === menu.id ? '#f7f3e7' : 'transparent'
                 }}
               >
-                <optgroup label="フード">
-                  <option value="food:seafood">海鮮</option>
-                  <option value="food:salad">サラダ</option>
-                  <option value="food:grill">焼き物</option>
-                  <option value="food:fried">揚げ物</option>
-                  <option value="food:small_dish">一品料理</option>
-                  <option value="food:rice">ご飯物</option>
-                </optgroup>
-                <optgroup label="その他カテゴリ">
-                  <option value="dessert">デザート</option>
-                  <option value="other">その他</option>
-                </optgroup>
-                <optgroup label="アルコール">
-                  <option value="drink:beer">アルコール &gt; ビール</option>
-                  <option value="drink:highball">アルコール &gt; ハイボール</option>
-                  <option value="drink:sour">アルコール &gt; サワー・酎ハイ</option>
-                  <option value="drink:cocktail">アルコール &gt; カクテル</option>
-                  <option value="drink:shochu">アルコール &gt; 焼酎</option>
-                  <option value="drink:sake">アルコール &gt; 日本酒</option>
-                  <option value="drink:wine">アルコール &gt; ワイン</option>
-                  <option value="drink:fruit_liquor">アルコール &gt; 梅酒・果実酒</option>
-                </optgroup>
-                <optgroup label="ソフトドリンク">
-                  <option value="drink:soft_drink">ソフトドリンク</option>
-                  <option value="drink:non_alcohol">ノンアルコール</option>
-                </optgroup>
-              </select>
-              <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
-                <input
-                  type="checkbox"
-                  checked={menu.isAllYouCan}
-                  onChange={() => setMenuById(menu.id, (m) => ({ ...m, isAllYouCan: !m.isAllYouCan }))}
-                />
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: `48px ${baseColumns} 0.8fr 0.8fr 0.8fr 0.9fr`,
+                    columnGap: 10,
+                    rowGap: 8,
+                    width: '100%'
+                  }}
+                >
+                  <div style={{ display: 'grid', placeItems: 'center', height: 42, fontSize: 22, color: '#8d877b' }}>☰</div>
+                  <input
+                    style={controlStyle}
+                    value={menu.name}
+                    onChange={(e) => setMenuById(menu.id, (m) => ({ ...m, name: e.target.value }))}
+                  />
+                  <input
+                    style={controlStyle}
+                    value={menu.nameKana}
+                    onChange={(e) => setMenuById(menu.id, (m) => ({ ...m, nameKana: e.target.value }))}
+                  />
+                  <div style={priceWrapStyle}>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="金額"
+                      style={priceInputStyle}
+                      value={formatDigits(menu.price)}
+                      onChange={(e) => setMenuById(menu.id, (m) => ({ ...m, price: toInt(e.target.value) }))}
+                    />
+                    <span style={yenStyle}>円</span>
+                  </div>
+                  <select
+                    style={controlStyle}
+                    value={menuToCategoryChoice(menu)}
+                    onChange={(e) => {
+                      const parsed = parseCategoryChoice(e.target.value as CategoryChoice);
+                      setMenuById(menu.id, (m) => ({
+                        ...m,
+                        category: parsed.category,
+                        foodSubCategory: parsed.food_sub_category,
+                        drinkSubCategory: parsed.drink_sub_category
+                      }));
+                    }}
+                  >
+                    <optgroup label="フード">
+                      <option value="food:seafood">海鮮</option>
+                      <option value="food:salad">サラダ</option>
+                      <option value="food:grill">焼き物</option>
+                      <option value="food:fried">揚げ物</option>
+                      <option value="food:small_dish">一品料理</option>
+                      <option value="food:rice">ご飯物</option>
+                    </optgroup>
+                    <optgroup label="その他カテゴリ">
+                      <option value="dessert">デザート</option>
+                      <option value="other">その他</option>
+                    </optgroup>
+                    <optgroup label="アルコール">
+                      <option value="drink:beer">アルコール &gt; ビール</option>
+                      <option value="drink:highball">アルコール &gt; ハイボール</option>
+                      <option value="drink:sour">アルコール &gt; サワー・酎ハイ</option>
+                      <option value="drink:cocktail">アルコール &gt; カクテル</option>
+                      <option value="drink:shochu">アルコール &gt; 焼酎</option>
+                      <option value="drink:sake">アルコール &gt; 日本酒</option>
+                      <option value="drink:wine">アルコール &gt; ワイン</option>
+                      <option value="drink:fruit_liquor">アルコール &gt; 梅酒・果実酒</option>
+                    </optgroup>
+                    <optgroup label="ソフトドリンク">
+                      <option value="drink:soft_drink">ソフトドリンク</option>
+                      <option value="drink:non_alcohol">ノンアルコール</option>
+                    </optgroup>
+                  </select>
+                  <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
+                    <input
+                      type="checkbox"
+                      checked={menu.isAllYouCan}
+                      onChange={() => setMenuById(menu.id, (m) => ({ ...m, isAllYouCan: !m.isAllYouCan }))}
+                    />
+                  </div>
+                  <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
+                    <input
+                      type="checkbox"
+                      checked={menu.isRecommended}
+                      onChange={() => toggleRecommended(menu)}
+                    />
+                  </div>
+                  <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
+                    <input
+                      type="checkbox"
+                      checked={menu.isSoldOut}
+                      onChange={() => setMenuById(menu.id, (m) => ({ ...m, isSoldOut: !m.isSoldOut }))}
+                    />
+                  </div>
+                  <button className="btn-danger" style={controlStyle} onClick={() => removeMenu(menu)}>
+                    削除
+                  </button>
+                </div>
               </div>
-              <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
-                <input
-                  type="checkbox"
-                  checked={menu.isRecommended}
-                  onChange={() => toggleRecommended(menu)}
-                />
-              </div>
-              <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
-                <input
-                  type="checkbox"
-                  checked={menu.isSoldOut}
-                  onChange={() => setMenuById(menu.id, (m) => ({ ...m, isSoldOut: !m.isSoldOut }))}
-                />
-              </div>
-              <button className="btn-danger" style={controlStyle} onClick={() => removeMenu(menu)}>
-                削除
-              </button>
-            </div>
+            ))}
           </div>
-        ))}
+        </div>
       </section>
     </main>
   );
