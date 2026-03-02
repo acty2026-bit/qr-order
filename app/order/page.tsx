@@ -617,7 +617,9 @@ export default function OrderPage() {
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             marginBottom: 8,
-            borderBottom: '1px solid #e5dfd4'
+            border: '1px solid #e5dfd4',
+            borderRadius: 5,
+            overflow: 'hidden'
           }}
         >
           <button
@@ -759,7 +761,7 @@ export default function OrderPage() {
           )}
 
           {listMenus.length === 0 && (
-            <div className="card" style={{ padding: 16, color: '#767068' }}>
+            <div className="card" style={{ padding: 16, color: '#767068', borderRadius: 5 }}>
               表示できる商品がありません
             </div>
           )}
