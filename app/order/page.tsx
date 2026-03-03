@@ -401,7 +401,7 @@ export default function OrderPage() {
   const isCompactPhone = mainWidth <= 360;
   const railWidth = mainWidth <= 350 ? 94 : mainWidth <= 390 ? 106 : 116;
   const footerHeight = 64;
-  const scrollPaneHeight = Math.max(260, viewportHeight - chromeHeight - footerHeight - 6);
+  const scrollPaneHeight = Math.max(260, viewportHeight - chromeHeight - footerHeight);
   const railGap = 6;
   const railButtonHeight = isCompactPhone ? 46 : 52;
 
@@ -410,6 +410,7 @@ export default function OrderPage() {
   const productNameFontSize = isCompactPhone ? 15 : 17;
   const productNameLineHeight = 1.25;
   const productNameMinHeight = Math.round(productNameFontSize * productNameLineHeight * 2);
+  const orangeGradient = 'linear-gradient(135deg, #ffac3f 0%, #f08d17 55%, #de7600 100%)';
 
   const renderMenuCard = (menu: Menu) => (
     <button
@@ -422,10 +423,11 @@ export default function OrderPage() {
         gridTemplateColumns: `1fr ${imageSize}px`,
         gap: 8,
         padding: 0,
-        borderRadius: 5,
-        border: '1px solid #e7e1d8',
+        borderRadius: 12,
+        border: '0',
         opacity: menu.isSoldOut ? 0.55 : 1,
         background: '#fff',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 8px 16px rgba(0,0,0,0.04)',
         minWidth: 0,
         textAlign: 'left',
         overflow: 'hidden',
@@ -468,7 +470,8 @@ export default function OrderPage() {
           }}
         >
           <span style={{ color: '#666', fontWeight: 700, fontSize: isCompactPhone ? 16 : 18 }}>
-            ￥{formatPrice(menu.price)}
+            <span style={{ fontSize: '0.84em' }}>￥</span>
+            {formatPrice(menu.price)}
           </span>
           {menu.isAllYouCan && (
             <span
@@ -518,9 +521,9 @@ export default function OrderPage() {
               position: 'absolute',
               top: 4,
               right: 4,
-              minWidth: 24,
+              width: 24,
               height: 24,
-              borderRadius: 5,
+              borderRadius: 9999,
               background: '#f08d17',
               color: '#fff',
               border: '2px solid #fff',
@@ -528,7 +531,7 @@ export default function OrderPage() {
               fontWeight: 700,
               display: 'grid',
               placeItems: 'center',
-              padding: '0 6px',
+              padding: 0,
               lineHeight: 1
             }}
           >
@@ -545,8 +548,8 @@ export default function OrderPage() {
         maxWidth: 430,
         width: '100%',
         margin: '0 auto',
-        padding: '8px 10px 66px',
-        background: '#f6f5f3',
+        padding: '8px 10px 64px',
+        background: '#F7F3EE',
         minHeight: '100dvh',
         boxSizing: 'border-box',
         overflowX: 'hidden',
@@ -558,16 +561,29 @@ export default function OrderPage() {
         style={{
           position: 'relative',
           textAlign: 'center',
-          padding: '8px 0 10px',
+          padding: '8px 10px 14px',
+          marginLeft: -10,
+          marginRight: -10,
           marginBottom: 10,
           boxShadow: '0 8px 14px -12px rgba(0, 0, 0, 0.45)'
         }}
       >
-        <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 2 }}>メニュー</div>
-        <div style={{ position: 'absolute', left: 2, top: 8, fontSize: 12, color: '#7a7469', fontWeight: 700 }}>
+        <img
+          src="/menu.png"
+          alt="MENU"
+          style={{
+            display: 'block',
+            width: 165,
+            height: 46,
+            objectFit: 'fill',
+            objectPosition: 'center',
+            margin: '25px auto 2px'
+          }}
+        />
+        <div style={{ position: 'absolute', left: 8, top: 8, zIndex: 2, fontSize: 12, color: '#7a7469', fontWeight: 700 }}>
           {store || '-'} / T{tableNo || '-'}
         </div>
-        <div style={{ position: 'absolute', right: 2, top: 8, display: 'flex', gap: 6 }}>
+        <div style={{ position: 'absolute', right: 8, top: 8, zIndex: 2, display: 'flex', gap: 6 }}>
           <button
             className="btn-ghost"
             style={{ width: 42, height: 42, borderRadius: 5, fontSize: 20, padding: 0 }}
@@ -585,10 +601,10 @@ export default function OrderPage() {
               width: 42,
               height: 42,
               borderRadius: 5,
-              fontSize: 20,
+              fontSize: 16,
               padding: 0,
-              background: '#f59b2e',
-              borderColor: '#f59b2e',
+              background: orangeGradient,
+              borderColor: '#de7600',
               color: '#fff'
             }}
             onClick={callStaff}
@@ -626,7 +642,7 @@ export default function OrderPage() {
               height: 44,
               border: 0,
               background: 'transparent',
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: planTab === 'all' ? 800 : 500,
               color: planTab === 'all' ? '#d26a00' : '#2a2824',
               borderBottom: planTab === 'all' ? '4px solid #d26a00' : '4px solid transparent',
@@ -642,7 +658,7 @@ export default function OrderPage() {
               height: 44,
               border: 0,
               background: 'transparent',
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: planTab === 'houdai' ? 800 : 500,
               color: planTab === 'houdai' ? '#d26a00' : '#2a2824',
               borderBottom: planTab === 'houdai' ? '4px solid #d26a00' : '4px solid transparent',
@@ -684,14 +700,16 @@ export default function OrderPage() {
               style={{
                 justifyContent: 'flex-start',
                 fontSize: railFontSize,
-                borderRadius: 5,
+                borderRadius: 12,
                 height: railButtonHeight,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 padding: '0 4px',
                 borderLeft: `4px solid ${railColor[key]}`,
-                background: activeRail === key ? '#fdf0dd' : '#fff',
+                background: activeRail === key ? '#fbf1e4' : '#fff',
+                border: '0',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 8px 16px rgba(0,0,0,0.04)',
                 color: activeRail === key ? '#7a4a12' : '#6d665c',
                 fontWeight: activeRail === key ? 700 : 500
               }}
@@ -744,7 +762,7 @@ export default function OrderPage() {
                   style={{
                     width: '100%',
                     height: 34,
-                    borderRadius: 5,
+                    borderRadius: 12,
                     fontSize: isCompactPhone ? 10 : 11,
                     padding: 0,
                     whiteSpace: 'nowrap',
@@ -763,7 +781,17 @@ export default function OrderPage() {
           )}
 
           {listMenus.length === 0 && (
-            <div className="card" style={{ padding: 16, color: '#767068', borderRadius: 5 }}>
+            <div
+              className="card"
+              style={{
+                padding: 16,
+                color: '#767068',
+                borderRadius: 12,
+                border: '0',
+                background: '#fff',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 8px 16px rgba(0,0,0,0.04)'
+              }}
+            >
               表示できる商品がありません
             </div>
           )}
@@ -782,10 +810,10 @@ export default function OrderPage() {
           width: 82,
           height: 82,
           borderRadius: 41,
-          background: '#f59b2e',
+          background: orangeGradient,
           color: '#fff',
-          border: '3px solid #fff',
-          boxShadow: '0 10px 24px rgba(0,0,0,0.32)',
+          border: '0',
+          boxShadow: '0 14px 30px rgba(0,0,0,0.44)',
           display: 'grid',
           placeItems: 'center',
           fontWeight: 800
@@ -839,10 +867,9 @@ export default function OrderPage() {
           bottom: 0,
           width: '100%',
           maxWidth: 430,
-          background: '#fff',
-          borderTop: '1px solid #ddd6c9',
-          borderLeft: '1px solid #ddd6c9',
-          borderRight: '1px solid #ddd6c9',
+          background: '#F7F3EE',
+          border: 0,
+          boxShadow: '0 -10px 22px rgba(0,0,0,0.12)',
           height: 64,
           display: 'grid',
           gridTemplateColumns: '1fr 1fr 1fr',
@@ -851,7 +878,7 @@ export default function OrderPage() {
       >
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={() => setActiveRail('recommendation')}>
           <div>🍴</div>
-          <div style={{ fontSize: 12, color: '#6d665c' }}>メニュー</div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>MENU</div>
         </button>
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={goToHistory}>
           <div>🕘</div>
@@ -982,11 +1009,11 @@ export default function OrderPage() {
               <button
                 className="btn-primary soft-blink"
                 onClick={addFromModal}
-                style={{
+              style={{
                   height: 48,
                   borderRadius: 5,
-                  background: '#f08d17',
-                  borderColor: '#f08d17',
+                  background: orangeGradient,
+                  borderColor: '#de7600',
                   color: '#fff',
                   fontSize: 20,
                   fontWeight: 800,

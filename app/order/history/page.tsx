@@ -185,7 +185,7 @@ export default function OrderHistoryPage() {
       >
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={() => router.push(`/order?store=${encodeURIComponent(store)}&table=${tableNo}`)}>
           <div>🍴</div>
-          <div style={{ fontSize: 12, color: '#6d665c' }}>メニュー</div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>MENU</div>
         </button>
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }}>
           <div>🕘</div>
