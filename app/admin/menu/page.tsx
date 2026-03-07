@@ -24,6 +24,7 @@ type Menu = {
   isAllYouCan: boolean;
   isRecommended: boolean;
   isSoldOut: boolean;
+  imageUrl?: string | null;
   sortOrder: number;
 };
 
@@ -64,8 +65,10 @@ export default function AdminMenuPage() {
   const [taxRate, setTaxRate] = useState(10);
   const [toast, setToast] = useState('');
   const [draggingMenuId, setDraggingMenuId] = useState<string | null>(null);
+  const [dragOverMenuId, setDragOverMenuId] = useState<string | null>(null);
   const [savingAll, setSavingAll] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [canDragRows, setCanDragRows] = useState(false);
 
   const load = async (storeKey: string) => {
     const res = await fetch(`/api/admin/menus?store=${encodeURIComponent(storeKey)}`);
@@ -95,9 +98,122 @@ export default function AdminMenuPage() {
     loadStoreConfig(storeKey);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    setCanDragRows(window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+  }, []);
+
+
   const showToast = (text: string) => {
     setToast(text);
     window.setTimeout(() => setToast(''), 1500);
+  };
+
+  const blobToDataUrl = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        if (!result) {
+          reject(new Error('画像変換に失敗しました'));
+          return;
+        }
+        resolve(result);
+      };
+      reader.onerror = () => reject(new Error('画像変換に失敗しました'));
+      reader.readAsDataURL(blob);
+    });
+
+  const loadImageFromFile = (file: File) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('画像読み込みに失敗しました'));
+      };
+      img.src = url;
+    });
+
+  const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>
+    new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('画像圧縮に失敗しました'));
+            return;
+          }
+          resolve(blob);
+        },
+        type,
+        quality
+      );
+    });
+
+  const compressImageTo2MBDataUrl = async (file: File) => {
+    const MAX_BYTES = 2 * 1024 * 1024;
+    const MAX_DIM = 1600;
+    const img = await loadImageFromFile(file);
+
+    const baseScale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+    let width = Math.max(1, Math.round(img.naturalWidth * baseScale));
+    let height = Math.max(1, Math.round(img.naturalHeight * baseScale));
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('画像処理コンテキストが取得できません');
+
+    let quality = 0.88;
+    let attempts = 0;
+    let blob: Blob | null = null;
+
+    while (attempts < 12) {
+      canvas.width = width;
+      canvas.height = height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+      if (blob.size <= MAX_BYTES) break;
+
+      if (quality > 0.52) {
+        quality -= 0.08;
+      } else {
+        width = Math.max(1, Math.round(width * 0.9));
+        height = Math.max(1, Math.round(height * 0.9));
+      }
+      attempts += 1;
+    }
+
+    if (!blob || blob.size > MAX_BYTES) {
+      throw new Error('画像サイズを2MB以下にできませんでした');
+    }
+
+    return blobToDataUrl(blob);
+  };
+
+  const onMenuImageChange = (id: string, file?: File) => {
+    void (async () => {
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showToast('画像ファイルを選択してください');
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        showToast('画像サイズは20MB以下にしてください');
+        return;
+      }
+      try {
+        const dataUrl = await compressImageTo2MBDataUrl(file);
+        setMenuById(id, (m) => ({ ...m, imageUrl: dataUrl }));
+        showToast('画像を最適化して設定しました');
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : '画像の処理に失敗しました');
+      }
+    })();
   };
 
   const toInt = (value: string) => {
@@ -175,6 +291,7 @@ export default function AdminMenuPage() {
         price: toInt(form.price),
         is_all_you_can: form.is_all_you_can,
         is_recommended: false,
+        image_url: null,
         sort_order: nextSortOrder
       })
     });
@@ -203,6 +320,7 @@ export default function AdminMenuPage() {
         is_all_you_can: menu.isAllYouCan,
         is_recommended: menu.isRecommended,
         is_sold_out: menu.isSoldOut,
+        image_url: menu.imageUrl ?? null,
         sort_order: Number(menu.sortOrder)
       })
     });
@@ -299,6 +417,7 @@ export default function AdminMenuPage() {
           is_all_you_can: menu.isAllYouCan,
           is_recommended: menu.isRecommended,
           is_sold_out: menu.isSoldOut,
+          image_url: menu.imageUrl ?? null,
           sort_order: Number(menu.sortOrder)
         })
       });
@@ -363,7 +482,15 @@ export default function AdminMenuPage() {
   ];
 
   return (
-    <main>
+    <main
+      style={{
+        height: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehaviorY: 'contain',
+        paddingBottom: 24
+      }}
+    >
       {toast && (
         <div
           style={{
@@ -508,7 +635,7 @@ export default function AdminMenuPage() {
             border: '1px solid #dedede',
             borderRadius: 5,
             display: 'grid',
-            gridTemplateColumns: '124px 1fr',
+            gridTemplateColumns: '148px 1fr',
             alignItems: 'stretch',
             marginBottom: 4
           }}
@@ -527,7 +654,7 @@ export default function AdminMenuPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: `48px ${baseColumns} 0.8fr 0.8fr 0.8fr 0.9fr`,
+              gridTemplateColumns: `48px 104px ${baseColumns} 0.8fr 0.8fr 0.8fr 0.9fr`,
               columnGap: 10,
               rowGap: 8,
               width: '100%',
@@ -538,6 +665,7 @@ export default function AdminMenuPage() {
             }}
           >
             <div style={{ textAlign: 'center' }}>並替え</div>
+            <div style={{ textAlign: 'center' }}>画像</div>
             <div>商品名</div>
             <div>かな</div>
             <div>金額</div>
@@ -549,7 +677,7 @@ export default function AdminMenuPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '124px 1fr', gap: 0, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '148px 1fr', gap: 0, alignItems: 'start' }}>
           <aside
             className="hide-scrollbar"
             style={{
@@ -557,7 +685,8 @@ export default function AdminMenuPage() {
               top: 152,
               display: 'grid',
               gap: 8,
-              alignContent: 'start'
+              alignContent: 'start',
+              paddingRight: 8
             }}
           >
             {filterItems.map((item) => (
@@ -570,7 +699,6 @@ export default function AdminMenuPage() {
                   padding: '0 8px',
                   justifyContent: 'flex-start',
                   borderRadius: 5,
-                  borderRight: 0,
                   borderLeft: `4px solid ${item.color}`,
                   background: menuFilter === item.key ? '#fdf0dd' : '#fff',
                   color: menuFilter === item.key ? '#7a4a12' : '#6d665c',
@@ -595,33 +723,97 @@ export default function AdminMenuPage() {
             {filteredMenus.map((menu) => (
               <div
                 key={menu.id}
-                draggable
-                onDragStart={() => setDraggingMenuId(menu.id)}
-                onDragEnd={() => setDraggingMenuId(null)}
-                onDragOver={(e) => e.preventDefault()}
+                draggable={false}
+                onDragStart={() => {}}
+                onDragEnd={() => {
+                  setDraggingMenuId(null);
+                  setDragOverMenuId(null);
+                }}
+                onDragOver={(e) => {
+                  if (!canDragRows) return;
+                  e.preventDefault();
+                  if (dragOverMenuId !== menu.id) setDragOverMenuId(menu.id);
+                }}
                 onDrop={(e) => {
+                  if (!canDragRows) return;
                   e.preventDefault();
                   void moveMenu(menu.id, filteredIds);
                   setDraggingMenuId(null);
+                  setDragOverMenuId(null);
                 }}
                 style={{
                   borderBottom: '1px solid #eee',
                   padding: '4px 0',
-                  cursor: 'grab',
+                  cursor: 'default',
                   opacity: draggingMenuId === menu.id ? 0.55 : 1,
-                  background: draggingMenuId === menu.id ? '#f7f3e7' : 'transparent'
+                  background: draggingMenuId === menu.id ? '#f7f3e7' : 'transparent',
+                  touchAction: 'pan-y',
+                  boxShadow: canDragRows && draggingMenuId && dragOverMenuId === menu.id ? 'inset 0 3px 0 #f08d17' : 'none'
                 }}
               >
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: `48px ${baseColumns} 0.8fr 0.8fr 0.8fr 0.9fr`,
+                    gridTemplateColumns: `48px 104px ${baseColumns} 0.8fr 0.8fr 0.8fr 0.9fr`,
                     columnGap: 10,
                     rowGap: 8,
                     width: '100%'
                   }}
                 >
-                  <div style={{ display: 'grid', placeItems: 'center', height: 42, fontSize: 22, color: '#8d877b' }}>☰</div>
+                  <div
+                    draggable={canDragRows}
+                    onDragStart={() => canDragRows && setDraggingMenuId(menu.id)}
+                    onDragEnd={() => {
+                      setDraggingMenuId(null);
+                      setDragOverMenuId(null);
+                    }}
+                    title={canDragRows ? 'ドラッグで並び替え' : '並び替えはPCで利用できます'}
+                    style={{
+                      display: 'grid',
+                      placeItems: 'center',
+                      height: 42,
+                      fontSize: 22,
+                      color: '#8d877b',
+                      cursor: canDragRows ? 'grab' : 'default',
+                      userSelect: 'none'
+                    }}
+                  >
+                    ☰
+                  </div>
+                  <div style={{ display: 'grid', placeItems: 'center', height: 42 }}>
+                    <label
+                      htmlFor={`menu-image-${menu.id}`}
+                      title="画像を変更"
+                      style={{
+                        width: 78,
+                        height: 42,
+                        borderRadius: 5,
+                        border: '1px solid #ddd6c9',
+                        background: '#f6f5f3',
+                        overflow: 'hidden',
+                        display: 'grid',
+                        placeItems: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {menu.imageUrl ? (
+                        <img src={menu.imageUrl} alt={menu.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ color: '#999', fontSize: 11 }}>画像選択</span>
+                      )}
+                    </label>
+                    <input
+                      id={`menu-image-${menu.id}`}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onClick={(e) => {
+                        const input = e.currentTarget as HTMLInputElement;
+                        input.value = '';
+                      }}
+                      onChange={(e) => onMenuImageChange(menu.id, e.target.files?.[0])}
+                    />
+                  </div>
                   <input
                     style={controlStyle}
                     value={menu.name}
@@ -713,6 +905,11 @@ export default function AdminMenuPage() {
           </div>
         </div>
       </section>
+      <style jsx global>{`
+        body {
+          overscroll-behavior-y: auto;
+        }
+      `}</style>
     </main>
   );
 }

@@ -405,33 +405,49 @@ export default function OrderPage() {
   const railGap = 6;
   const railButtonHeight = isCompactPhone ? 46 : 52;
 
-  const imageSize = isCompactPhone ? 84 : 96;
+  const imageHeight = isCompactPhone ? 84 : 96;
+  const imageWidth = Math.round((imageHeight * 4) / 3);
   const railFontSize = isCompactPhone ? 13 : 14;
   const productNameFontSize = isCompactPhone ? 15 : 17;
   const productNameLineHeight = 1.25;
   const productNameMinHeight = Math.round(productNameFontSize * productNameLineHeight * 2);
   const orangeGradient = 'linear-gradient(135deg, #ffac3f 0%, #f08d17 55%, #de7600 100%)';
+  const brownGradient = 'linear-gradient(135deg, #a66a46 0%, #7e472f 58%, #5f3425 100%)';
+  const paperBg = '#f4eee5';
+  const panelBg = '#f9f4ec';
+  const cardBg = '#fffaf3';
+  const borderTone = '#dfd1bf';
+  const textMain = '#4f3f34';
 
   const renderMenuCard = (menu: Menu) => (
-    <button
+    <div
       key={menu.id}
       className="card"
       onClick={() => openMenuModal(menu)}
-      disabled={menu.isSoldOut}
+      role="button"
+      tabIndex={menu.isSoldOut ? -1 : 0}
+      aria-disabled={menu.isSoldOut}
+      onKeyDown={(e) => {
+        if (menu.isSoldOut) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openMenuModal(menu);
+        }
+      }}
       style={{
         display: 'grid',
-        gridTemplateColumns: `1fr ${imageSize}px`,
-        gap: 8,
+        gridTemplateColumns: `1fr ${imageWidth}px`,
+        gap: 0,
         padding: 0,
         borderRadius: 12,
-        border: '0',
+        border: `1px solid ${borderTone}`,
         opacity: menu.isSoldOut ? 0.55 : 1,
-        background: '#fff',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 8px 16px rgba(0,0,0,0.04)',
+        background: cardBg,
         minWidth: 0,
         textAlign: 'left',
         overflow: 'hidden',
-        minHeight: imageSize
+        minHeight: imageHeight,
+        cursor: menu.isSoldOut ? 'not-allowed' : 'pointer'
       }}
     >
       <div
@@ -449,7 +465,7 @@ export default function OrderPage() {
             fontWeight: 800,
             fontSize: productNameFontSize,
             lineHeight: productNameLineHeight,
-            color: '#666',
+            color: textMain,
             wordBreak: 'break-word',
             minHeight: productNameMinHeight,
             display: '-webkit-box',
@@ -469,7 +485,7 @@ export default function OrderPage() {
             gap: 8
           }}
         >
-          <span style={{ color: '#666', fontWeight: 700, fontSize: isCompactPhone ? 16 : 18 }}>
+          <span style={{ color: textMain, fontWeight: 700, fontSize: isCompactPhone ? 16 : 18 }}>
             <span style={{ fontSize: '0.84em' }}>￥</span>
             {formatPrice(menu.price)}
           </span>
@@ -494,10 +510,9 @@ export default function OrderPage() {
       </div>
       <div
         style={{
-          width: imageSize,
+          width: imageWidth,
           height: '100%',
-          minHeight: imageSize,
-          background: 'linear-gradient(145deg, #f4f0e9, #ffffff)',
+          minHeight: imageHeight,
           display: 'grid',
           placeItems: 'center',
           overflow: 'hidden',
@@ -513,6 +528,39 @@ export default function OrderPage() {
           />
         ) : (
           <span style={{ fontSize: isCompactPhone ? 42 : 48 }}>{icons[menu.category]}</span>
+        )}
+        {!menu.isSoldOut && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openMenuModal(menu);
+            }}
+            style={{
+              position: 'absolute',
+              right: 8,
+              bottom: 13,
+              height: 22,
+              minWidth: 54,
+              borderRadius: 9999,
+              border: '1px solid rgba(215, 120, 0, 0.7)',
+              background: 'rgba(240, 141, 23, 0.82)',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 12,
+              lineHeight: 1,
+              padding: '0 6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 3,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
+              cursor: 'pointer'
+            }}
+          >
+            注文
+            <span aria-hidden>›</span>
+          </button>
         )}
         {getQty(menu.id) > 0 && (
           <span
@@ -539,7 +587,7 @@ export default function OrderPage() {
           </span>
         )}
       </div>
-    </button>
+    </div>
   );
 
   return (
@@ -549,7 +597,7 @@ export default function OrderPage() {
         width: '100%',
         margin: '0 auto',
         padding: '8px 10px 64px',
-        background: '#F7F3EE',
+        background: paperBg,
         minHeight: '100dvh',
         boxSizing: 'border-box',
         overflowX: 'hidden',
@@ -565,7 +613,8 @@ export default function OrderPage() {
           marginLeft: -10,
           marginRight: -10,
           marginBottom: 10,
-          boxShadow: '0 8px 14px -12px rgba(0, 0, 0, 0.45)'
+          background: panelBg,
+          borderBottom: '1px solid #e6d8c8'
         }}
       >
         <img
@@ -586,7 +635,15 @@ export default function OrderPage() {
         <div style={{ position: 'absolute', right: 8, top: 8, zIndex: 2, display: 'flex', gap: 6 }}>
           <button
             className="btn-ghost"
-            style={{ width: 42, height: 42, borderRadius: 5, fontSize: 20, padding: 0 }}
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 10,
+              fontSize: 20,
+              padding: 0,
+              background: '#fffaf2',
+              border: `1px solid ${borderTone}`
+            }}
             onClick={() => {
               setIsSearchOpen((prev) => !prev);
               window.setTimeout(() => searchInputRef.current?.focus(), 0);
@@ -600,11 +657,11 @@ export default function OrderPage() {
             style={{
               width: 42,
               height: 42,
-              borderRadius: 5,
+              borderRadius: 10,
               fontSize: 16,
               padding: 0,
               background: orangeGradient,
-              borderColor: '#de7600',
+              borderColor: '#cf6f16',
               color: '#fff'
             }}
             onClick={callStaff}
@@ -632,22 +689,25 @@ export default function OrderPage() {
           style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
+            gap: 8,
+            padding: 6,
             marginBottom: 8,
-            borderBottom: '1px solid #e5dfd4'
+            background: panelBg,
+            borderRadius: 12,
+            border: `1px solid ${borderTone}`,
+            
           }}
         >
           <button
             onClick={() => setPlanTab('all')}
             style={{
-              height: 44,
-              border: 0,
-              background: 'transparent',
+              height: 42,
+              border: `1px solid ${borderTone}`,
+              borderRadius: 10,
+              background: planTab === 'all' ? brownGradient : panelBg,
               fontSize: 16,
-              fontWeight: planTab === 'all' ? 800 : 500,
-              color: planTab === 'all' ? '#d26a00' : '#2a2824',
-              borderBottom: planTab === 'all' ? '4px solid #d26a00' : '4px solid transparent',
-              borderBottomLeftRadius: 2,
-              borderBottomRightRadius: 2
+              fontWeight: planTab === 'all' ? 700 : 600,
+              color: planTab === 'all' ? '#fff' : textMain
             }}
           >
             全て
@@ -655,15 +715,13 @@ export default function OrderPage() {
           <button
             onClick={() => setPlanTab('houdai')}
             style={{
-              height: 44,
-              border: 0,
-              background: 'transparent',
+              height: 42,
+              border: `1px solid ${borderTone}`,
+              borderRadius: 10,
+              background: planTab === 'houdai' ? brownGradient : panelBg,
               fontSize: 16,
-              fontWeight: planTab === 'houdai' ? 800 : 500,
-              color: planTab === 'houdai' ? '#d26a00' : '#2a2824',
-              borderBottom: planTab === 'houdai' ? '4px solid #d26a00' : '4px solid transparent',
-              borderBottomLeftRadius: 2,
-              borderBottomRightRadius: 2
+              fontWeight: planTab === 'houdai' ? 700 : 600,
+              color: planTab === 'houdai' ? '#fff' : textMain
             }}
           >
             放題
@@ -689,7 +747,8 @@ export default function OrderPage() {
             overflowY: 'auto',
             overscrollBehaviorY: 'contain',
             overscrollBehaviorX: 'none',
-            paddingRight: 2
+            paddingRight: 2,
+            position: 'relative'
           }}
         >
           {railItems.map((key) => (
@@ -706,11 +765,10 @@ export default function OrderPage() {
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 padding: '0 4px',
-                borderLeft: `4px solid ${railColor[key]}`,
-                background: activeRail === key ? '#fbf1e4' : '#fff',
-                border: '0',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 8px 16px rgba(0,0,0,0.04)',
-                color: activeRail === key ? '#7a4a12' : '#6d665c',
+                background: activeRail === key ? '#fff' : cardBg,
+                border: `1px solid ${borderTone}`,
+                borderLeft: activeRail === key ? '4px solid #c66f2f' : `1px solid ${borderTone}`,
+                color: activeRail === key ? '#7a4a12' : textMain,
                 fontWeight: activeRail === key ? 700 : 500
               }}
             >
@@ -731,7 +789,9 @@ export default function OrderPage() {
             overflowX: 'hidden',
             overscrollBehaviorY: 'contain',
             overscrollBehaviorX: 'none',
-            paddingRight: 2
+            paddingRight: 2,
+            paddingBottom: 104,
+            position: 'relative'
           }}
         >
           {activeRail === 'alcohol' && (
@@ -768,9 +828,10 @@ export default function OrderPage() {
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    background: activeAlcoholSub === key ? '#fdf0dd' : '#fff',
-                    color: activeAlcoholSub === key ? '#7a4a12' : '#4e463d',
-                    borderColor: activeAlcoholSub === key ? '#f0c38a' : undefined,
+                    background: activeAlcoholSub === key ? '#fff' : cardBg,
+                    borderLeft: activeAlcoholSub === key ? '4px solid #c66f2f' : `1px solid ${borderTone}`,
+                    color: activeAlcoholSub === key ? '#7a4a12' : textMain,
+                    borderColor: borderTone,
                     fontWeight: activeAlcoholSub === key ? 700 : 500
                   }}
                 >
@@ -787,9 +848,9 @@ export default function OrderPage() {
                 padding: 16,
                 color: '#767068',
                 borderRadius: 12,
-                border: '0',
-                background: '#fff',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 8px 16px rgba(0,0,0,0.04)'
+                border: `1px solid ${borderTone}`,
+                background: cardBg,
+                
               }}
             >
               表示できる商品がありません
@@ -812,8 +873,8 @@ export default function OrderPage() {
           borderRadius: 41,
           background: orangeGradient,
           color: '#fff',
-          border: '0',
-          boxShadow: '0 14px 30px rgba(0,0,0,0.44)',
+          border: '3px solid #fff3df',
+          boxShadow: '0 4px 0 #c76f1c, 0 12px 20px rgba(115,64,19,0.35)',
           display: 'grid',
           placeItems: 'center',
           fontWeight: 800
@@ -867,9 +928,10 @@ export default function OrderPage() {
           bottom: 0,
           width: '100%',
           maxWidth: 430,
-          background: '#F7F3EE',
-          border: 0,
-          boxShadow: '0 -10px 22px rgba(0,0,0,0.12)',
+          background: panelBg,
+          borderTop: '1px solid #e2d5c5',
+          borderLeft: '1px solid #e2d5c5',
+          borderRight: '1px solid #e2d5c5',
           height: 64,
           display: 'grid',
           gridTemplateColumns: '1fr 1fr 1fr',
@@ -912,7 +974,6 @@ export default function OrderPage() {
               borderRadius: 5,
               overflow: 'hidden',
               border: '1px solid #d9d2c4',
-              boxShadow: '0 14px 30px rgba(0,0,0,0.28)',
               position: 'relative'
             }}
           >
@@ -1043,7 +1104,6 @@ export default function OrderPage() {
             padding: '12px 18px',
             borderRadius: 5,
             border: '1px solid #e4ddd1',
-            boxShadow: '0 10px 22px rgba(0, 0, 0, 0.16)',
             fontWeight: 700,
             animation: 'toast-fade 2s ease-in-out'
           }}

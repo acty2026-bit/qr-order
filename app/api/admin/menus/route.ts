@@ -29,6 +29,7 @@ const createSchema = z.object({
   is_all_you_can: z.boolean().optional().default(false),
   is_recommended: z.boolean().optional().default(false),
   is_sold_out: z.boolean().optional().default(false),
+  image_url: z.string().optional().nullable(),
   sort_order: z.number().int().optional().default(0)
 });
 
@@ -57,23 +58,28 @@ const updateSchema = z.object({
   is_all_you_can: z.boolean(),
   is_recommended: z.boolean(),
   is_sold_out: z.boolean(),
+  image_url: z.string().optional().nullable(),
   sort_order: z.number().int()
 });
 
 const deleteSchema = z.object({ id: z.string().min(1) });
 
 export async function GET(req: NextRequest) {
-  const storeKey = req.nextUrl.searchParams.get('store');
-  if (!storeKey) return badRequest('store is required');
+  try {
+    const storeKey = req.nextUrl.searchParams.get('store');
+    if (!storeKey) return badRequest('store is required');
 
-  const store = await getStoreByKey(storeKey);
-  if (!store) return badRequest('store not found', 404);
+    const store = await getStoreByKey(storeKey);
+    if (!store) return badRequest('store not found', 404);
 
-  const rawMenus = await prisma.menu.findMany({
-    where: { storeId: store.id, deletedAt: null },
-    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
-  });
-  return NextResponse.json({ store, menus: rawMenus });
+    const rawMenus = await prisma.menu.findMany({
+      where: { storeId: store.id, deletedAt: null },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
+    });
+    return NextResponse.json({ store, menus: rawMenus });
+  } catch {
+    return badRequest('DB更新が未適用です。migrate deploy を実行してください', 500);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -95,6 +101,7 @@ export async function POST(req: NextRequest) {
       isAllYouCan: parsed.data.is_all_you_can,
       isRecommended: parsed.data.is_recommended,
       isSoldOut: parsed.data.is_sold_out,
+      imageUrl: parsed.data.image_url ?? null,
       sortOrder: parsed.data.sort_order
     }
   });
@@ -118,6 +125,7 @@ export async function PUT(req: NextRequest) {
       isAllYouCan: parsed.data.is_all_you_can,
       isRecommended: parsed.data.is_recommended,
       isSoldOut: parsed.data.is_sold_out,
+      imageUrl: parsed.data.image_url ?? null,
       sortOrder: parsed.data.sort_order
     }
   });
