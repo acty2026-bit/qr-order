@@ -95,6 +95,7 @@ export default function OrderPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [repeatMenuIds, setRepeatMenuIds] = useState<string[]>([]);
+  const [checkingOut, setCheckingOut] = useState(false);
   const [planTab, setPlanTab] = useState<'all' | 'houdai'>('all');
   const [activeRail, setActiveRail] = useState<RailKey>('recommendation');
   const [activeAlcoholSub, setActiveAlcoholSub] = useState<
@@ -318,9 +319,26 @@ export default function OrderPage() {
     router.push(`/order/history?store=${encodeURIComponent(store)}&table=${tableNo}`);
   };
 
-  const shareQr = () => {
-    const shareUrl = `${window.location.origin}/order?store=${encodeURIComponent(store)}&table=${tableNo}`;
-    window.prompt('同じテーブル共有用URL', shareUrl);
+  const checkout = async () => {
+    if (!store || !tableNo || checkingOut) return;
+    const ok = window.confirm('会計を確定します。よろしいですか？');
+    if (!ok) return;
+
+    setCheckingOut(true);
+    const res = await fetch('/api/order/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ store_key: store, table_no: tableNo })
+    });
+    setCheckingOut(false);
+
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      window.alert(`会計に失敗しました: ${json.error ?? 'unknown'}`);
+      return;
+    }
+
+    router.push(`/order/checkout-complete?store=${encodeURIComponent(store)}&table=${tableNo}`);
   };
 
   const railItems: RailKey[] = [
@@ -939,16 +957,38 @@ export default function OrderPage() {
         }}
       >
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={() => setActiveRail('recommendation')}>
-          <div>🍴</div>
+          <div style={{ display: 'grid', placeItems: 'center', marginBottom: 1 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 3V10" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" />
+              <path d="M4 3V7" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" />
+              <path d="M8 3V7" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" />
+              <path d="M6 10V21" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" />
+              <path d="M16 3C18.2 5.5 18.2 8.5 16 11V21" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
           <div style={{ fontSize: 12, color: '#6d665c' }}>MENU</div>
         </button>
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={goToHistory}>
-          <div>🕘</div>
+          <div style={{ display: 'grid', placeItems: 'center', marginBottom: 1 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 7V12L15 14" stroke="#6f6f6f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="7" stroke="#6f6f6f" strokeWidth="2" />
+              <path d="M8 3.5H16" stroke="#6f6f6f" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
           <div style={{ fontSize: 12, color: '#6d665c' }}>履歴</div>
         </button>
-        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={shareQr}>
-          <div>▦</div>
-          <div style={{ fontSize: 12, color: '#6d665c' }}>QR</div>
+        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={checkout} disabled={checkingOut}>
+          <div style={{ display: 'grid', placeItems: 'center', marginBottom: 1 }}>
+            {checkingOut ? (
+              <span style={{ color: '#6f6f6f', fontWeight: 700 }}>…</span>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M8 4L11.3 10H8.5V12H11.8V14H8.5V16H11.8V20H13.8V16H17V14H13.8V12H17V10H14.3L17.6 4H15.3L12.8 8.9L10.3 4H8Z" fill="#6f6f6f" />
+              </svg>
+            )}
+          </div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>{checkingOut ? '処理中' : 'お会計'}</div>
         </button>
       </nav>
 

@@ -19,6 +19,7 @@ export default function OrderHistoryPage() {
   const router = useRouter();
   const [store, setStore] = useState('');
   const [tableNo, setTableNo] = useState(0);
+  const [checkingOut, setCheckingOut] = useState(false);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<HistoryOrder[]>([]);
   const [message, setMessage] = useState('');
@@ -55,6 +56,11 @@ export default function OrderHistoryPage() {
     void loadHistory(storeKey, table);
   }, []);
 
+  useEffect(() => {
+    if (!store || !tableNo) return;
+    router.prefetch(`/order?store=${encodeURIComponent(store)}&table=${tableNo}`);
+  }, [router, store, tableNo]);
+
   const grandTotal = useMemo(() => orders.reduce((sum, order) => sum + order.total, 0), [orders]);
   const showToast = (text: string) => {
     setToast(text);
@@ -71,10 +77,34 @@ export default function OrderHistoryPage() {
     if (res.ok) showToast('店員を呼び出しました');
   };
 
-  const shareQr = () => {
-    const shareUrl = `${window.location.origin}/order?store=${encodeURIComponent(store)}&table=${tableNo}`;
-    window.prompt('同じテーブル共有用URL', shareUrl);
+  const goToMenu = () => {
+    router.push(`/order?store=${encodeURIComponent(store)}&table=${tableNo}`);
   };
+
+  const checkout = async () => {
+    if (!store || !tableNo || checkingOut) return;
+    const ok = window.confirm('会計を確定します。よろしいですか？');
+    if (!ok) return;
+
+    setCheckingOut(true);
+    const res = await fetch('/api/order/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ store_key: store, table_no: tableNo })
+    });
+    setCheckingOut(false);
+
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      window.alert(`会計に失敗しました: ${json.error ?? 'unknown'}`);
+      return;
+    }
+
+    router.push(`/order/checkout-complete?store=${encodeURIComponent(store)}&table=${tableNo}`);
+  };
+
+  const orangeGradient = 'linear-gradient(135deg, #ffac3f 0%, #f08d17 55%, #de7600 100%)';
+  const panelBg = '#f9f4ec';
 
   return (
     <main
@@ -92,25 +122,45 @@ export default function OrderHistoryPage() {
     >
       <div
         style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
+          position: 'relative',
           textAlign: 'center',
-          padding: '8px 0 10px',
+          padding: '8px 10px 14px',
+          marginLeft: -10,
+          marginRight: -10,
           marginBottom: 10,
-          background: '#f6f5f3',
-          boxShadow: '0 8px 14px -12px rgba(0, 0, 0, 0.45)'
+          background: panelBg,
+          borderBottom: '1px solid #e6d8c8'
         }}
       >
-        <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 2 }}>注文履歴</div>
-        <div style={{ position: 'absolute', left: 2, top: 8, fontSize: 12, color: '#7a7469', fontWeight: 700 }}>
+        <div
+          style={{
+            display: 'block',
+            width: 165,
+            margin: '25px auto 2px',
+            fontSize: 28,
+            fontWeight: 800,
+            lineHeight: 1,
+            color: '#7a4a12'
+          }}
+        >
+          注文履歴
+        </div>
+        <div style={{ position: 'absolute', left: 8, top: 8, zIndex: 2, fontSize: 12, color: '#7a7469', fontWeight: 700 }}>
           {store || '-'} / T{tableNo || '-'}
         </div>
-        <div style={{ position: 'absolute', right: 2, top: 8, display: 'flex', gap: 6 }}>
+        <div style={{ position: 'absolute', right: 8, top: 8, zIndex: 2, display: 'flex', gap: 6 }}>
           <button
             className="btn-ghost"
-            style={{ width: 42, height: 42, borderRadius: 10, fontSize: 20, padding: 0 }}
-            onClick={() => router.push(`/order?store=${encodeURIComponent(store)}&table=${tableNo}`)}
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 10,
+              fontSize: 20,
+              padding: 0,
+              background: '#fffaf2',
+              border: '1px solid #dfd1bf'
+            }}
+            onClick={goToMenu}
             aria-label="メニューへ"
           >
             🔍
@@ -121,10 +171,10 @@ export default function OrderHistoryPage() {
               width: 42,
               height: 42,
               borderRadius: 10,
-              fontSize: 20,
+              fontSize: 16,
               padding: 0,
-              background: '#f59b2e',
-              borderColor: '#f59b2e',
+              background: orangeGradient,
+              borderColor: '#cf6f16',
               color: '#fff'
             }}
             onClick={callStaff}
@@ -173,27 +223,49 @@ export default function OrderHistoryPage() {
           bottom: 0,
           width: '100%',
           maxWidth: 430,
-          background: '#fff',
-          borderTop: '1px solid #ddd6c9',
-          borderLeft: '1px solid #ddd6c9',
-          borderRight: '1px solid #ddd6c9',
+          background: panelBg,
+          borderTop: '1px solid #e2d5c5',
+          borderLeft: '1px solid #e2d5c5',
+          borderRight: '1px solid #e2d5c5',
           height: 64,
           display: 'grid',
           gridTemplateColumns: '1fr 1fr 1fr',
           zIndex: 20
         }}
       >
-        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={() => router.push(`/order?store=${encodeURIComponent(store)}&table=${tableNo}`)}>
-          <div>🍴</div>
+        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={goToMenu}>
+          <div style={{ display: 'grid', placeItems: 'center', marginBottom: 1 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 3V10" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" />
+              <path d="M4 3V7" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" />
+              <path d="M8 3V7" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" />
+              <path d="M6 10V21" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" />
+              <path d="M16 3C18.2 5.5 18.2 8.5 16 11V21" stroke="#e97a1f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
           <div style={{ fontSize: 12, color: '#6d665c' }}>MENU</div>
         </button>
         <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }}>
-          <div>🕘</div>
+          <div style={{ display: 'grid', placeItems: 'center', marginBottom: 1 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 7V12L15 14" stroke="#6f6f6f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="7" stroke="#6f6f6f" strokeWidth="2" />
+              <path d="M8 3.5H16" stroke="#6f6f6f" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
           <div style={{ fontSize: 12, color: '#6d665c' }}>履歴</div>
         </button>
-        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={shareQr}>
-          <div>▦</div>
-          <div style={{ fontSize: 12, color: '#6d665c' }}>QR</div>
+        <button className="btn-ghost" style={{ border: 0, borderRadius: 0 }} onClick={checkout} disabled={checkingOut}>
+          <div style={{ display: 'grid', placeItems: 'center', marginBottom: 1 }}>
+            {checkingOut ? (
+              <span style={{ color: '#6f6f6f', fontWeight: 700 }}>…</span>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M8 4L11.3 10H8.5V12H11.8V14H8.5V16H11.8V20H13.8V16H17V14H13.8V12H17V10H14.3L17.6 4H15.3L12.8 8.9L10.3 4H8Z" fill="#6f6f6f" />
+              </svg>
+            )}
+          </div>
+          <div style={{ fontSize: 12, color: '#6d665c' }}>{checkingOut ? '処理中' : 'お会計'}</div>
         </button>
       </nav>
 

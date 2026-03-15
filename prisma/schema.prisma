@@ -55,8 +55,16 @@ model Store {
   orders      Order[]
   calls       Call[]
   tableStates TableState[]
+  feedbacks   CustomerFeedback[]
 
   @@map("stores")
+}
+
+enum FeedbackSatisfaction {
+  very_satisfied
+  satisfied
+  neutral
+  dissatisfied
 }
 
 model Menu {
@@ -145,4 +153,21 @@ model TableState {
   @@unique([storeId, tableNo])
   @@index([storeId, tableNo])
   @@map("table_states")
+}
+
+model CustomerFeedback {
+  id           String               @id @default(cuid())
+  storeId      String               @map("store_id")
+  tableNo      Int?                 @map("table_no")
+  orderId      String?              @map("order_id")
+  sessionId    String?              @map("session_id")
+  satisfaction FeedbackSatisfaction
+  comment      String
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, createdAt])
+  @@index([sessionId])
+  @@map("customer_feedbacks")
 }

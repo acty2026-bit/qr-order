@@ -44,6 +44,11 @@ export default function OrderReviewPage() {
   }, []);
 
   useEffect(() => {
+    if (!store || !tableNo) return;
+    router.prefetch(`/order?store=${encodeURIComponent(store)}&table=${tableNo}`);
+  }, [router, store, tableNo]);
+
+  useEffect(() => {
     if (!store) return;
     const raw = sessionStorage.getItem(cartKey);
     if (raw) {
@@ -118,6 +123,10 @@ export default function OrderReviewPage() {
     if (res.ok) showToast('店員を呼び出しました');
   };
 
+  const goToMenu = () => {
+    router.push(`/order?store=${encodeURIComponent(store)}&table=${tableNo}`);
+  };
+
   const shareQr = () => {
     const shareUrl = `${window.location.origin}/order?store=${encodeURIComponent(store)}&table=${tableNo}`;
     window.prompt('同じテーブル共有用URL', shareUrl);
@@ -157,7 +166,7 @@ export default function OrderReviewPage() {
           <button
             className="btn-ghost"
             style={{ width: 42, height: 42, borderRadius: 10, fontSize: 20, padding: 0 }}
-            onClick={() => router.push(`/order?store=${encodeURIComponent(store)}&table=${tableNo}`)}
+            onClick={goToMenu}
             aria-label="メニューへ"
           >
             🔍
